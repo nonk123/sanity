@@ -49,7 +49,10 @@ pub fn run(_: &Args) -> crate::Result<()> {
     for (name, template) in state.env.templates() {
         let data = template.render(context! {})?; // TODO: user-defined context
         let out_path = dist()?.join(name);
-        fs::write(out_path, data)?;
+
+        if !is_underscored(&out_path) {
+            fs::write(out_path, data)?;
+        }
     }
 
     Ok(())
@@ -86,6 +89,10 @@ fn walk(in_path: &Path, state: &mut State) -> crate::Result<()> {
                 state.env.add_template_owned(name, src)?;
             }
             Some("scss") => {
+                if is_underscored(in_path) {
+                    return Ok(());
+                }
+
                 let input = fs::read_to_string(in_path)?;
                 let data = grass::from_string(input, &grass::Options::default())?;
 
@@ -93,10 +100,19 @@ fn walk(in_path: &Path, state: &mut State) -> crate::Result<()> {
                 fs::write(out_path, data)?;
             }
             _ => {
-                fs::copy(in_path, out_path)?;
+                if !is_underscored(in_path) {
+                    fs::copy(in_path, out_path)?;
+                }
             }
         }
     }
 
     Ok(())
+}
+
+fn is_underscored(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|x| x.to_str())
+        .map(|x| x.starts_with("_"))
+        .unwrap_or(false)
 }
