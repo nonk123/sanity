@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fs,
     path::{Path, PathBuf},
 };
@@ -41,25 +42,34 @@ pub fn run(_: &Args) -> crate::Result<()> {
     }
 
     let mut state = State {
+        templates: HashMap::new(),
         env: Environment::new(),
     };
 
     walk(&www()?, &mut state)?;
 
-    for (name, template) in state.env.templates() {
-        let data = template.render(context! {})?; // TODO: user-defined context
-        let out_path = dist()?.join(name);
+    let State { templates, mut env } = state;
 
-        if !is_underscored(&out_path) {
-            fs::write(out_path, data)?;
+    let templates0 = templates.clone();
+    env.set_loader(move |name| Ok(templates0.get(name).map(|x| x.to_string())));
+
+    for (name, _) in templates {
+        let out_path = dist()?.join(&name);
+
+        if is_underscored(&out_path) {
+            continue;
         }
+
+        let data = env.get_template(&name)?.render(context! {})?; // TODO: user-defined context
+        fs::write(out_path, data)?;
     }
 
     Ok(())
 }
 
-struct State {
-    env: Environment<'static>,
+struct State<'a> {
+    templates: HashMap<String, String>,
+    env: Environment<'a>,
 }
 
 fn walk(in_path: &Path, state: &mut State) -> crate::Result<()> {
@@ -80,30 +90,24 @@ fn walk(in_path: &Path, state: &mut State) -> crate::Result<()> {
 
                 let name = out_path
                     .strip_prefix(dist()?)?
-                    .with_extension("")
                     .to_str()
                     .ok_or_else(|| eyre!("Files should have a basename"))?
                     .to_string();
 
-                let src = fs::read_to_string(in_path)?;
-                state.env.add_template_owned(name, src)?;
+                let source = fs::read_to_string(in_path)?;
+                state.templates.insert(name, source);
             }
-            Some("scss") => {
-                if is_underscored(in_path) {
-                    return Ok(());
-                }
-
+            Some("scss") if !is_underscored(in_path) => {
                 let input = fs::read_to_string(in_path)?;
                 let data = grass::from_string(input, &grass::Options::default())?;
 
                 out_path.set_extension("css");
                 fs::write(out_path, data)?;
             }
-            _ => {
-                if !is_underscored(in_path) {
-                    fs::copy(in_path, out_path)?;
-                }
+            _ if !is_underscored(in_path) => {
+                fs::copy(in_path, out_path)?;
             }
+            _ => (),
         }
     }
 

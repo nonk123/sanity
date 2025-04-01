@@ -4,7 +4,7 @@ The only sane static site generator in existence. Here's what it does for you:
 
 - Process SCSS to CSS using [grass](https://github.com/connorskees/grass).
 - Render Jinja2 templates with [minijinja](https://github.com/mitsuhiko/minijinja).
-- Files prefixed with `_` are excluded from SCSS/Jinja2 rendering. (Useful for a "base" HTML template you don't want rendered, only `{% extend %}`ed.)
+- Files prefixed with `_` are excluded from SCSS/Jinja2 rendering. (Useful for a "base" HTML template you don't want rendered, only extended.)
 - Leave other files alone and copy them as-is.
 
 ## Usage
