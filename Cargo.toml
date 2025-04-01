@@ -7,4 +7,8 @@ edition = "2024"
 clap = { version = "4.5", features = ["derive"] }
 color-eyre = "0.6"
 grass = "0.13"
+http-body-util = "0.1"
+hyper = { version = "1", features = ["http1", "http2", "server"] }
+hyper-util = { version = "0.1", features = ["full"] }
 minijinja = { version = "2.9", features = ["loader", "multi_template"] }
+tokio = { version = "1", features = ["full"] }

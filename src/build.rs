@@ -1,36 +1,20 @@
-use std::{
-    collections::HashMap,
-    fs,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashMap, fs, path::Path};
 
 use color_eyre::eyre::eyre;
 use minijinja::{Environment, context};
 
-use crate::Args;
-
-pub fn root() -> crate::Result<PathBuf> {
-    Ok(std::env::current_dir()?.canonicalize()?)
-}
-
-pub fn www() -> crate::Result<PathBuf> {
-    Ok(root()?.join("www"))
-}
-
-pub fn dist() -> crate::Result<PathBuf> {
-    Ok(root()?.join("dist"))
-}
+use crate::{Args, paths};
 
 pub fn run(_: &Args) -> crate::Result<()> {
-    if !www()?.exists() {
+    if !paths::www()?.exists() {
         return Err(eyre!(
             "Please create and populate the www directory {:?}",
-            www()?
+            paths::www()?
         ));
     }
 
-    if dist()?.exists() {
-        for child in fs::read_dir(dist()?)? {
+    if paths::dist()?.exists() {
+        for child in fs::read_dir(paths::dist()?)? {
             let child = child?.path();
 
             if child.is_dir() {
@@ -46,7 +30,7 @@ pub fn run(_: &Args) -> crate::Result<()> {
         env: Environment::new(),
     };
 
-    walk(&www()?, &mut state)?;
+    walk(&paths::www()?, &mut state)?;
 
     let State { templates, mut env } = state;
 
@@ -54,7 +38,7 @@ pub fn run(_: &Args) -> crate::Result<()> {
     env.set_loader(move |name| Ok(templates0.get(name).map(|x| x.to_string())));
 
     for (name, _) in templates {
-        let out_path = dist()?.join(&name);
+        let out_path = paths::dist()?.join(&name);
 
         if is_underscored(&out_path) {
             continue;
@@ -73,7 +57,7 @@ struct State<'a> {
 }
 
 fn walk(in_path: &Path, state: &mut State) -> crate::Result<()> {
-    let mut out_path = dist()?.join(in_path.strip_prefix(www()?)?);
+    let mut out_path = paths::dist()?.join(in_path.strip_prefix(paths::www()?)?);
 
     if in_path.is_dir() {
         fs::create_dir_all(out_path)?;
@@ -89,7 +73,7 @@ fn walk(in_path: &Path, state: &mut State) -> crate::Result<()> {
                 out_path.set_extension("");
 
                 let name = out_path
-                    .strip_prefix(dist()?)?
+                    .strip_prefix(paths::dist()?)?
                     .to_str()
                     .ok_or_else(|| eyre!("Files should have a basename"))?
                     .to_string();
