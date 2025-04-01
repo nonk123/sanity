@@ -28,6 +28,18 @@ pub fn run(_: &Args) -> crate::Result<()> {
         ));
     }
 
+    if dist()?.exists() {
+        for child in fs::read_dir(dist()?)? {
+            let child = child?.path();
+
+            if child.is_dir() {
+                fs::remove_dir_all(child)?;
+            } else {
+                fs::remove_file(child)?;
+            }
+        }
+    }
+
     let mut state = State {
         env: Environment::new(),
     };
