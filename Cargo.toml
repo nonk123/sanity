@@ -1,0 +1,10 @@
+[package]
+name = "sanity"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+color-eyre = "0.6"
+grass = "0.13"
+minijinja = { version = "2.9", features = ["loader"] }
