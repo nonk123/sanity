@@ -21,6 +21,13 @@ pub fn dist() -> crate::Result<PathBuf> {
 }
 
 pub fn run(_: &Args) -> crate::Result<()> {
+    if !www()?.exists() {
+        return Err(eyre!(
+            "Please create and populate the www directory {:?}",
+            www()?
+        ));
+    }
+
     let mut state = State {
         env: Environment::new(),
     };
