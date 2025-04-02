@@ -26,11 +26,6 @@ pub struct Args {
 }
 
 pub type Result<T> = color_eyre::eyre::Result<T>;
-static ARGS: OnceLock<Args> = OnceLock::new();
-
-pub fn args() -> &'static Args {
-    ARGS.get().unwrap()
-}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -52,9 +47,7 @@ async fn main() -> Result<()> {
         }
     }
 
-    if args().watch {
-        std::thread::spawn(watcher);
-    }
+    std::thread::spawn(watcher);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8000));
     let listener = TcpListener::bind(addr).await?;
@@ -66,7 +59,7 @@ async fn main() -> Result<()> {
 
         tokio::task::spawn(async move {
             if let Err(err) = http1::Builder::new()
-                .serve_connection(io, service_fn(service))
+                .serve_connection(io, service_fn(http_service))
                 .await
             {
                 error!("{:?}", err);
@@ -75,14 +68,14 @@ async fn main() -> Result<()> {
     }
 }
 
-async fn service(
+async fn http_service(
     req: Request<hyper::body::Incoming>,
 ) -> core::result::Result<Response<Full<Bytes>>, color_eyre::Report> {
     let in_path = req.uri().path()[1..].to_string();
     let mut out_path = paths::dist()?.join(in_path);
 
     if !out_path.exists() {
-        return Err(eyre!("Path doesn't exist"));
+        return Err(eyre!("File or directory doesn't exist {:?}", out_path));
     }
 
     if out_path.is_dir() {
@@ -90,7 +83,7 @@ async fn service(
     }
 
     if !out_path.exists() {
-        return Err(eyre!("Path doesn't exist"));
+        return Err(eyre!("File doesn't exist: {:?}", out_path));
     }
 
     let data = std::fs::read(out_path)?;
@@ -103,7 +96,7 @@ fn watcher() -> Result<()> {
     let mut debouncer = new_debouncer(
         Duration::from_millis(600),
         None,
-        move |result: DebounceEventResult| match result {
+        |result: DebounceEventResult| match result {
             Ok(events) => {
                 for event in events {
                     if !event.kind.is_access() {
@@ -133,4 +126,10 @@ fn rebuild() {
         Ok(()) => info!("Rebuilt!"),
         Err(report) => error!("Failed to rebuild: {:?}", report),
     }
+}
+
+static ARGS: OnceLock<Args> = OnceLock::new();
+
+pub fn args() -> &'static Args {
+    ARGS.get().unwrap()
 }

@@ -8,7 +8,7 @@ use crate::paths;
 pub fn run() -> crate::Result<()> {
     if !paths::www()?.exists() {
         return Err(eyre!(
-            "Please create and populate the www directory {:?}",
+            "Please create and populate the www directory: {:?}",
             paths::www()?
         ));
     }
@@ -51,9 +51,9 @@ pub fn run() -> crate::Result<()> {
     Ok(())
 }
 
-struct State<'a> {
-    templates: HashMap<String, String>,
-    env: Environment<'a>,
+struct State {
+    templates: HashMap<String, String>, // workaround to using owned template sources
+    env: Environment<'static>,
 }
 
 fn walk(in_path: &Path, state: &mut State) -> crate::Result<()> {
@@ -88,10 +88,11 @@ fn walk(in_path: &Path, state: &mut State) -> crate::Result<()> {
                 out_path.set_extension("css");
                 fs::write(out_path, data)?;
             }
-            _ if !is_underscored(in_path) => {
-                fs::copy(in_path, out_path)?;
+            _ => {
+                if !is_underscored(in_path) {
+                    fs::copy(in_path, out_path)?;
+                }
             }
-            _ => (),
         }
     }
 
