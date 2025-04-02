@@ -1,0 +1,42 @@
+name: Build for major platforms
+
+on:
+  push:
+    branches: ["release"]
+
+jobs:
+  build:
+    name: Upload distribution for ${{ matrix.config.fancy-name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - name: release-linux
+            fancy-name: Linux
+            os: ubuntu-latest
+            bin-ext: ""
+          - name: release-windows
+            fancy-name: Windows
+            os: windows-latest
+            bin-ext: .exe
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with: { ref: "release" }
+      - name: Build
+        run: |
+          cargo build --release
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sanity-${{ matrix.config.name }}${{ matrix.config.bin-ext }}
+          path: target/release/sanity${{ matrix.config.bin-ext }}
