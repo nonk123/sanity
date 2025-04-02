@@ -22,7 +22,7 @@ pub struct Args {
 }
 
 pub type Result<T> = color_eyre::eyre::Result<T>;
-pub static ARGS: OnceLock<Args> = OnceLock::new();
+static ARGS: OnceLock<Args> = OnceLock::new();
 
 pub fn args() -> &'static Args {
     ARGS.get().unwrap()
@@ -33,7 +33,7 @@ async fn main() -> Result<()> {
     let _ = color_eyre::install();
 
     let mut args0 = Args::try_parse()?;
-    args0.watch |= args0.server; // TODO: watch and server...
+    args0.watch |= args0.server;
     ARGS.set(args0).unwrap();
 
     if !args().server {
@@ -113,6 +113,7 @@ fn watcher() -> Result<()> {
     )?;
 
     debouncer.watch(&paths::www()?, RecursiveMode::Recursive)?;
+    println!("Watching {:?}", paths::www()?);
 
     loop {
         std::thread::yield_now();
@@ -120,9 +121,8 @@ fn watcher() -> Result<()> {
 }
 
 fn rebuild() {
-    if let Err(report) = build::run() {
-        eprintln!("Failed to (re)build: {:?}", report);
-    } else {
-        println!("Rebuilt!");
+    match build::run() {
+        Ok(()) => println!("Rebuilt!"),
+        Err(report) => eprintln!("Failed to rebuild: {:?}", report),
     }
 }
