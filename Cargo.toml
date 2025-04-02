@@ -11,4 +11,6 @@ http-body-util = "0.1"
 hyper = { version = "1", features = ["http1", "http2", "server"] }
 hyper-util = { version = "0.1", features = ["full"] }
 minijinja = { version = "2.9", features = ["loader", "multi_template"] }
+notify-debouncer-full = "0.5"
+notify = "8"
 tokio = { version = "1", features = ["full"] }

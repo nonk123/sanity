@@ -3,9 +3,9 @@ use std::{collections::HashMap, fs, path::Path};
 use color_eyre::eyre::eyre;
 use minijinja::{Environment, context};
 
-use crate::{Args, paths};
+use crate::paths;
 
-pub fn run(_: &Args) -> crate::Result<()> {
+pub fn run() -> crate::Result<()> {
     if !paths::www()?.exists() {
         return Err(eyre!(
             "Please create and populate the www directory {:?}",
