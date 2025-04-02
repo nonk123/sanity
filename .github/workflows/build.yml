@@ -1,8 +1,8 @@
-name: Build for major platforms
+name: Build and release for major platforms
 
 on:
   push:
-    branches: ["release"]
+    tags: ["gh-actions"]
 
 jobs:
   build:
@@ -36,8 +36,11 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
+      - name: Rename binary artifact
+        run: |
+          cp target/release/sanity${{ matrix.config.bin-ext }} \
+             sanity-${{ matrix.config.name }}${{ matrix.config.bin-ext }}
+      - name: Release binary
+        uses: softprops/action-gh-release@v2
         with:
-          name: sanity-${{ matrix.config.name }}
-          path: target/release/sanity${{ matrix.config.bin-ext }}
+          files: sanity-${{ matrix.config.name }}${{ matrix.config.bin-ext }}
