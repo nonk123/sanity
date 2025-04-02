@@ -45,8 +45,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Rename binary artifact
         run: |
-          cp target/release/sanity${{ matrix.config.bin-ext }} \
-             sanity-${{ matrix.config.name }}${{ matrix.config.bin-ext }}
+          cp target/release/sanity${{ matrix.config.bin-ext }} sanity-${{ matrix.config.name }}${{ matrix.config.bin-ext }}
       - name: Release binary
         uses: softprops/action-gh-release@v2
         with:
