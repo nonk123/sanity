@@ -26,6 +26,7 @@ jobs:
         with: { ref: "release" }
       - name: Build
         run: |
+          cargo fetch --locked
           cargo build --release
       - name: Cache dependencies
         uses: actions/cache@v4
@@ -38,5 +39,5 @@ jobs:
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
-          name: sanity-${{ matrix.config.name }}${{ matrix.config.bin-ext }}
+          name: sanity-${{ matrix.config.name }}
           path: target/release/sanity${{ matrix.config.bin-ext }}
