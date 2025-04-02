@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate log;
+
 use std::{net::SocketAddr, sync::OnceLock, time::Duration};
 
 use clap::Parser;
@@ -5,6 +8,7 @@ use color_eyre::eyre::eyre;
 use http_body_util::Full;
 use hyper::{Request, Response, body::Bytes, server::conn::http1, service::service_fn};
 use hyper_util::rt::TokioIo;
+use log::LevelFilter;
 use notify::RecursiveMode;
 use notify_debouncer_full::{DebounceEventResult, new_debouncer};
 use tokio::net::TcpListener;
@@ -32,6 +36,10 @@ pub fn args() -> &'static Args {
 async fn main() -> Result<()> {
     let _ = color_eyre::install();
 
+    pretty_env_logger::formatted_builder()
+        .filter_level(LevelFilter::Info)
+        .try_init()?;
+
     let mut args0 = Args::try_parse()?;
     args0.watch |= args0.server;
     ARGS.set(args0).unwrap();
@@ -50,7 +58,7 @@ async fn main() -> Result<()> {
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8000));
     let listener = TcpListener::bind(addr).await?;
-    println!("Hosting dev-server on http://{}", addr);
+    info!("Hosting dev-server on http://{}", addr);
 
     loop {
         let (stream, _) = listener.accept().await?;
@@ -61,7 +69,7 @@ async fn main() -> Result<()> {
                 .serve_connection(io, service_fn(service))
                 .await
             {
-                eprintln!("Error serving connection: {:?}", err);
+                error!("{:?}", err);
             }
         });
     }
@@ -106,14 +114,14 @@ fn watcher() -> Result<()> {
             }
             Err(errors) => {
                 for error in errors {
-                    eprintln!("{:?}", error);
+                    error!("{:?}", error);
                 }
             }
         },
     )?;
 
     debouncer.watch(&paths::www()?, RecursiveMode::Recursive)?;
-    println!("Watching {:?}", paths::www()?);
+    info!("Watching {:?}", paths::www()?);
 
     loop {
         std::thread::yield_now();
@@ -122,7 +130,7 @@ fn watcher() -> Result<()> {
 
 fn rebuild() {
     match build::run() {
-        Ok(()) => println!("Rebuilt!"),
-        Err(report) => eprintln!("Failed to rebuild: {:?}", report),
+        Ok(()) => info!("Rebuilt!"),
+        Err(report) => error!("Failed to rebuild: {:?}", report),
     }
 }

@@ -14,3 +14,5 @@ minijinja = { version = "2.9", features = ["loader", "multi_template"] }
 notify-debouncer-full = "0.5"
 notify = "8"
 tokio = { version = "1", features = ["full"] }
+pretty_env_logger = "0.5"
+log = { version = "0.4", features = ["std"] }
