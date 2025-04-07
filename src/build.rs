@@ -1,4 +1,8 @@
-use std::{collections::HashMap, fs, path::Path};
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+    path::{Path, PathBuf},
+};
 
 use color_eyre::eyre::eyre;
 use minijinja::{Environment, context};
@@ -27,25 +31,26 @@ pub fn run() -> crate::Result<()> {
 
     let mut state = State {
         templates: HashMap::new(),
+        read_paths: HashSet::new(),
         env: Environment::new(),
     };
 
     walk(&paths::www()?, &mut state)?;
 
-    let State { templates, mut env } = state;
+    let State {
+        templates, mut env, ..
+    } = state;
 
-    let templates0 = templates.clone();
-    env.set_loader(move |name| Ok(templates0.get(name).map(|x| x.to_string())));
+    let names: HashSet<String> = templates.keys().map(|x| x.to_string()).collect();
+    env.set_loader(move |name| Ok(templates.get(name).map(|x| x.to_string())));
 
-    for (name, _) in templates {
+    for name in names {
         let out_path = paths::dist()?.join(&name);
 
-        if is_underscored(&out_path) {
-            continue;
+        if !is_underscored(&out_path) {
+            let data = env.get_template(&name)?.render(context! {})?; // TODO: user-defined context
+            fs::write(out_path, data)?;
         }
-
-        let data = env.get_template(&name)?.render(context! {})?; // TODO: user-defined context
-        fs::write(out_path, data)?;
     }
 
     Ok(())
@@ -53,6 +58,7 @@ pub fn run() -> crate::Result<()> {
 
 struct State {
     templates: HashMap<String, String>, // workaround to using owned template sources
+    read_paths: HashSet<PathBuf>,
     env: Environment<'static>,
 }
 
@@ -65,23 +71,26 @@ fn walk(in_path: &Path, state: &mut State) -> crate::Result<()> {
         for child in fs::read_dir(in_path)? {
             walk(&child?.path(), state)?;
         }
-    } else {
+    } else if !state.read_paths.contains(in_path) {
         let ext = in_path.extension().and_then(|x| x.to_str());
 
         match ext {
             Some("j2") => {
-                out_path.set_extension("");
+                state.read_paths.insert(in_path.to_path_buf());
 
                 let name = out_path
+                    .with_extension("")
                     .strip_prefix(paths::dist()?)?
                     .to_str()
-                    .ok_or_else(|| eyre!("Files should have a basename"))?
+                    .ok_or_else(|| eyre!("File names should be UTF-8"))?
                     .to_string();
 
                 let source = fs::read_to_string(in_path)?;
                 state.templates.insert(name, source);
             }
             Some("scss") if !is_underscored(in_path) => {
+                state.read_paths.insert(in_path.to_path_buf());
+
                 let input = fs::read_to_string(in_path)?;
                 let data = grass::from_string(input, &grass::Options::default())?;
 
@@ -90,6 +99,7 @@ fn walk(in_path: &Path, state: &mut State) -> crate::Result<()> {
             }
             _ => {
                 if !is_underscored(in_path) {
+                    state.read_paths.insert(in_path.to_path_buf());
                     fs::copy(in_path, out_path)?;
                 }
             }
