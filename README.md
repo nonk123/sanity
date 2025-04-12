@@ -7,6 +7,8 @@ The only sane static site generator in existence. Here's what it does for you:
 - Run [Lua scripts](#scripting) with [mlua](https://github.com/mlua-rs/mlua).
 - Leave other files alone and copy them as-is.
 
+Directories are walked recursively depth-first, with files processed and directories read in an alphanumeric order.
+
 Files prefixed with `_` are excluded from SCSS/Jinja2 rendering. (Useful for a "base" HTML template you don't want rendered, only extended.)
 
 ## Usage

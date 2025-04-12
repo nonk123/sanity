@@ -68,8 +68,16 @@ fn walk(in_path: &Path, state: &mut State) -> crate::Result<()> {
     if in_path.is_dir() {
         fs::create_dir_all(out_path)?;
 
+        let mut ls = Vec::new();
+
         for child in fs::read_dir(in_path)? {
-            walk(&child?.path(), state)?;
+            ls.push(child?.path());
+        }
+
+        ls.sort_by(|a, b| a.as_os_str().cmp(b.as_os_str()));
+
+        for child in ls {
+            walk(&child, state)?;
         }
     } else if !state.read_paths.contains(in_path) {
         let ext = in_path.extension().and_then(|x| x.to_str());
