@@ -9,6 +9,7 @@ use color_eyre::eyre::eyre;
 use minijinja::{Environment, context};
 
 use crate::{
+    Result,
     lua::{Render, Shebang},
     paths,
 };
@@ -16,7 +17,7 @@ use crate::{
 // Limited to a single instance because the closures moving an `Arc` would cause memory leaks on repeated usage.
 static LUA_SHEBANG: OnceLock<Shebang> = OnceLock::new();
 
-pub fn preflight() -> crate::Result<()> {
+pub fn preflight() -> Result<()> {
     LUA_SHEBANG
         .set(crate::lua::new()?)
         .or(Err(eyre!("Failed to initialize the Lua shebang")))?;
@@ -27,7 +28,7 @@ fn postbuild_cleanup() {
     LUA_SHEBANG.get().unwrap().postbuild_cleanup();
 }
 
-fn _run() -> crate::Result<()> {
+fn _run() -> Result<()> {
     if !paths::www()?.exists() {
         return Err(eyre!(
             "Please create and populate the www directory: {:?}",
@@ -86,7 +87,7 @@ fn _run() -> crate::Result<()> {
     Ok(())
 }
 
-pub fn run() -> crate::Result<()> {
+pub fn run() -> Result<()> {
     let result = _run();
     postbuild_cleanup();
     result
@@ -98,7 +99,7 @@ struct State {
     env: Environment<'static>,
 }
 
-fn walk(in_path: &Path, state: &mut State) -> crate::Result<()> {
+fn walk(in_path: &Path, state: &mut State) -> Result<()> {
     let mut out_path = paths::dist()?.join(in_path.strip_prefix(paths::www()?)?);
 
     if in_path.is_dir() {

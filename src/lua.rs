@@ -6,6 +6,8 @@ use std::{
 
 use mlua::{Lua, LuaSerdeExt, Value};
 
+use crate::{Result, paths};
+
 pub struct Render {
     pub template: String,
     pub target: PathBuf,
@@ -18,7 +20,7 @@ pub struct Shebang {
 }
 
 impl Shebang {
-    pub fn process(&self, file: &Path) -> crate::Result<()> {
+    pub fn process(&self, file: &Path) -> Result<()> {
         self.lua.load(file).exec()?;
         Ok(())
     }
@@ -40,7 +42,7 @@ impl State {
     }
 }
 
-pub fn new() -> crate::Result<Shebang> {
+pub fn new() -> Result<Shebang> {
     let lua = Lua::new();
     let globals = lua.globals();
 
@@ -53,7 +55,7 @@ pub fn new() -> crate::Result<Shebang> {
 
             state.lock().unwrap().render_queue.push(Render {
                 context: minijinja::Value::from_serialize(context),
-                target: crate::paths::dist().unwrap().join(target),
+                target: paths::dist().unwrap().join(target),
                 template,
             });
 
@@ -63,13 +65,13 @@ pub fn new() -> crate::Result<Shebang> {
     globals.set("render", render)?;
 
     let json = lua.create_function(move |lua, path: String| {
-        fn inner(lua: &Lua, path: &Path) -> crate::Result<Value> {
+        fn inner(lua: &Lua, path: &Path) -> Result<Value> {
             let file = File::open(path)?;
             let serde: minijinja::Value = serde_json::from_reader(file)?; // INSANE hack
             Ok(lua.to_value(&serde)?)
         }
 
-        let path = crate::paths::www().unwrap().join(path);
+        let path = paths::www().unwrap().join(path);
         match inner(lua, &path) {
             Ok(ok) => Ok(ok),
             Err(err) => {
