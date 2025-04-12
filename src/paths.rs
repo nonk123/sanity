@@ -1,13 +1,13 @@
-use std::path::PathBuf;
+type SeriousPath = crate::Result<std::path::PathBuf>;
 
-pub fn root() -> crate::Result<PathBuf> {
+pub fn root() -> SeriousPath {
     Ok(std::env::current_dir()?.canonicalize()?)
 }
 
-pub fn www() -> crate::Result<PathBuf> {
+pub fn www() -> SeriousPath {
     Ok(root()?.join("www"))
 }
 
-pub fn dist() -> crate::Result<PathBuf> {
+pub fn dist() -> SeriousPath {
     Ok(root()?.join("dist"))
 }

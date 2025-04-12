@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate log;
 
-use std::{convert::Infallible, net::SocketAddr, sync::OnceLock, thread, time::Duration};
+use std::{convert::Infallible, fs, net::SocketAddr, sync::OnceLock, thread, time::Duration};
 
 use clap::Parser;
 use color_eyre::eyre::eyre;
@@ -77,14 +77,14 @@ async fn main() -> Result<()> {
 async fn http_service(
     req: Request<Incoming>,
 ) -> core::result::Result<Response<Full<Bytes>>, Infallible> {
-    let in_path = req.uri().path()[1..].to_string();
+    let query = req.uri().path()[1..].to_string();
 
     match _http_service(req).await {
         Ok(ok) => Ok(ok),
         Err(err) => {
-            error!("{:?} -> {:?}", in_path, err);
+            error!("{:?} -> {:?}", query, err);
 
-            let fuckyou = format!(include_str!("error.html"), in_path, err);
+            let fuckyou = format!(include_str!("error.html"), query, err);
             Ok(Response::new(Full::new(Bytes::from(fuckyou))))
         }
     }
@@ -106,7 +106,7 @@ async fn _http_service(req: Request<Incoming>) -> Result<Response<Full<Bytes>>> 
         return Err(eyre!("File doesn't exist: {:?}", out_path));
     }
 
-    let data = std::fs::read(out_path)?;
+    let data = fs::read(out_path)?;
     Ok(Response::new(Full::new(Bytes::from(data))))
 }
 

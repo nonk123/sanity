@@ -20,7 +20,7 @@ static LUA_SHEBANG: OnceLock<Shebang> = OnceLock::new();
 pub fn preflight() -> Result<()> {
     LUA_SHEBANG
         .set(crate::lua::new()?)
-        .or(Err(eyre!("Failed to initialize the Lua shebang")))?;
+        .map_err(|_| eyre!("Failed to initialize the Lua shebang"))?;
     Ok(())
 }
 
@@ -60,8 +60,8 @@ fn _run() -> Result<()> {
         templates, mut env, ..
     } = state;
 
-    let names: HashSet<String> = templates.keys().map(|x| x.to_string()).collect();
-    env.set_loader(move |name| Ok(templates.get(name).map(|x| x.to_string())));
+    let names: HashSet<String> = templates.keys().map(String::to_string).collect();
+    env.set_loader(move |name| Ok(templates.get(name).map(String::to_string)));
 
     for name in names {
         let out_path = paths::dist()?.join(&name);
@@ -99,16 +99,16 @@ struct State {
     env: Environment<'static>,
 }
 
-fn walk(in_path: &Path, state: &mut State) -> Result<()> {
-    let mut out_path = paths::dist()?.join(in_path.strip_prefix(paths::www()?)?);
+fn walk(branch: &Path, state: &mut State) -> Result<()> {
+    let mut out_path = paths::dist()?.join(branch.strip_prefix(paths::www()?)?);
 
-    if in_path.is_dir() {
+    if branch.is_dir() {
         fs::create_dir_all(out_path)?;
 
-        let mut ls = Vec::new();
+        let mut ls = Vec::with_capacity(64); // doesn't matter but im GREEDY
 
-        for child in fs::read_dir(in_path)? {
-            ls.push(child?.path());
+        for child in fs::read_dir(branch)? {
+            ls.push(child?.path().canonicalize()?);
         }
 
         ls.sort_by(|a, b| a.as_os_str().cmp(b.as_os_str()));
@@ -116,13 +116,11 @@ fn walk(in_path: &Path, state: &mut State) -> Result<()> {
         for child in ls {
             walk(&child, state)?;
         }
-    } else if !state.read_paths.contains(in_path) {
-        let ext = in_path.extension().and_then(|x| x.to_str());
+    } else if !state.read_paths.contains(branch) {
+        let ext = branch.extension().and_then(|x| x.to_str());
 
         match ext {
             Some("j2") => {
-                state.read_paths.insert(in_path.to_path_buf());
-
                 let name = out_path
                     .with_extension("")
                     .strip_prefix(paths::dist()?)?
@@ -130,28 +128,27 @@ fn walk(in_path: &Path, state: &mut State) -> Result<()> {
                     .ok_or_else(|| eyre!("File names should be UTF-8"))?
                     .to_string();
 
-                let source = fs::read_to_string(in_path)?;
+                let source = fs::read_to_string(branch)?;
                 state.templates.insert(name, source);
             }
-            Some("scss") if !is_underscored(in_path) => {
-                state.read_paths.insert(in_path.to_path_buf());
-
-                let input = fs::read_to_string(in_path)?;
+            Some("scss") if !is_underscored(branch) => {
+                let input = fs::read_to_string(branch)?;
                 let data = grass::from_string(input, &grass::Options::default())?;
 
                 out_path.set_extension("css");
                 fs::write(out_path, data)?;
             }
-            Some("lua") if !is_underscored(in_path) => {
-                state.read_paths.insert(in_path.to_path_buf());
-                LUA_SHEBANG.get().unwrap().process(in_path)?;
+            Some("lua") if !is_underscored(branch) => {
+                LUA_SHEBANG.get().unwrap().process(branch)?;
             }
-            _ if !is_underscored(in_path) => {
-                state.read_paths.insert(in_path.to_path_buf());
-                fs::copy(in_path, out_path)?;
+            _ => {
+                if !is_underscored(branch) {
+                    fs::copy(branch, out_path)?;
+                }
             }
-            _ => (),
         }
+
+        state.read_paths.insert(branch.to_path_buf());
     }
 
     Ok(())
