@@ -64,11 +64,10 @@ fn _run() -> Result<()> {
     env.set_loader(move |name| Ok(templates.get(name).map(String::to_string)));
 
     for name in names {
-        let out_path = paths::dist()?.join(&name);
+        let target = paths::dist()?.join(&name);
 
-        if !is_underscored(&out_path) {
-            let data = env.get_template(&name)?.render(context! {})?; // TODO: user-defined context
-            fs::write(out_path, data)?;
+        if !is_underscored(&target) {
+            render(&env, &name, &target, &context! {})?; // TODO: user-defined context
         }
     }
 
@@ -80,10 +79,21 @@ fn _run() -> Result<()> {
         context,
     } in &state.render_queue
     {
-        let data = env.get_template(template)?.render(context.clone())?;
-        fs::write(target, data)?;
+        render(&env, template, target, context)?;
     }
 
+    Ok(())
+}
+
+fn render(
+    env: &Environment<'static>,
+    template: &str,
+    target: &Path,
+    context: &minijinja::Value,
+) -> Result<()> {
+    let _ = fs::create_dir_all(target.parent().ok_or(eyre!("No parent directory???"))?);
+    let data = env.get_template(template)?.render(context.clone())?;
+    fs::write(target, data)?;
     Ok(())
 }
 
