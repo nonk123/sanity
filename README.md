@@ -26,10 +26,10 @@ There isn't much to scripting besides the custom `render` function. Take a look 
 ```lua
 local blog = {
     ["nice-day"] = {
-        "date": "today",
-        "contents": "I had a nice day today."
+        date = "today",
+        contents = "I had a nice day today."
     }
-}
+};
 
 for id, post in pairs(blog) do
     render("_article.html", "blog/" .. id .. ".html", {
