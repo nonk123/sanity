@@ -41,3 +41,10 @@ end
 ```
 
 `render` takes a template name to render, where to write the output (relative to `dist`), and what context to supply to it. (You can use `date` and `contents` from above using the `{{ name }}` mustache syntax inside your template.)
+
+You can also read JSON files inside `www` into Lua tables with e.g.:
+
+```lua
+local blog = json("blog/db.json");
+-- the rest is the same as the example above...
+```

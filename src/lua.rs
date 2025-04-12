@@ -1,9 +1,10 @@
 use std::{
+    fs::File,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
 };
 
-use mlua::{Lua, Value};
+use mlua::{Lua, LuaSerdeExt, Value};
 
 pub struct Render {
     pub template: String,
@@ -60,6 +61,24 @@ pub fn new() -> crate::Result<Shebang> {
         },
     )?;
     globals.set("render", render)?;
+
+    let json = lua.create_function(move |lua, path: String| {
+        fn inner(lua: &Lua, path: &Path) -> crate::Result<Value> {
+            let file = File::open(path)?;
+            let serde: minijinja::Value = serde_json::from_reader(file)?; // INSANE hack
+            Ok(lua.to_value(&serde)?)
+        }
+
+        let path = crate::paths::www().unwrap().join(path);
+        match inner(lua, &path) {
+            Ok(ok) => Ok(ok),
+            Err(err) => {
+                error!("JSON load failed {:?}: {:?}", path, err);
+                Ok(Value::Nil)
+            }
+        }
+    })?;
+    globals.set("json", json)?;
 
     Ok(Shebang { lua, state: state0 })
 }
