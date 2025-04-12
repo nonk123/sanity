@@ -14,6 +14,7 @@ use notify_debouncer_full::{DebounceEventResult, new_debouncer};
 use tokio::net::TcpListener;
 
 mod build;
+mod lua;
 mod paths;
 
 #[derive(Parser, Debug, Clone)]
@@ -38,6 +39,8 @@ async fn main() -> Result<()> {
     let mut args0 = Args::try_parse()?;
     args0.watch |= args0.server;
     ARGS.set(args0).unwrap();
+
+    build::preflight()?;
 
     if !args().server {
         if args().watch {

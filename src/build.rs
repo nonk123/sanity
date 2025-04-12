@@ -2,14 +2,32 @@ use std::{
     collections::{HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
+    sync::OnceLock,
 };
 
 use color_eyre::eyre::eyre;
 use minijinja::{Environment, context};
 
-use crate::paths;
+use crate::{
+    lua::{Render, Shebang},
+    paths,
+};
 
-pub fn run() -> crate::Result<()> {
+// Limited to a single instance because the closures moving an `Arc` would cause memory leaks on repeated usage.
+static LUA_SHEBANG: OnceLock<Shebang> = OnceLock::new();
+
+pub fn preflight() -> crate::Result<()> {
+    LUA_SHEBANG
+        .set(crate::lua::new()?)
+        .or(Err(eyre!("Failed to initialize the Lua shebang")))?;
+    Ok(())
+}
+
+fn postbuild_cleanup() {
+    LUA_SHEBANG.get().unwrap().postbuild_cleanup();
+}
+
+fn _run() -> crate::Result<()> {
     if !paths::www()?.exists() {
         return Err(eyre!(
             "Please create and populate the www directory: {:?}",
@@ -53,7 +71,25 @@ pub fn run() -> crate::Result<()> {
         }
     }
 
+    let state = LUA_SHEBANG.get().unwrap().state.lock().unwrap();
+
+    for Render {
+        template,
+        target,
+        context,
+    } in &state.render_queue
+    {
+        let data = env.get_template(template)?.render(context.clone())?;
+        fs::write(target, data)?;
+    }
+
     Ok(())
+}
+
+pub fn run() -> crate::Result<()> {
+    let result = _run();
+    postbuild_cleanup();
+    result
 }
 
 struct State {
@@ -105,12 +141,15 @@ fn walk(in_path: &Path, state: &mut State) -> crate::Result<()> {
                 out_path.set_extension("css");
                 fs::write(out_path, data)?;
             }
-            _ => {
-                if !is_underscored(in_path) {
-                    state.read_paths.insert(in_path.to_path_buf());
-                    fs::copy(in_path, out_path)?;
-                }
+            Some("lua") if !is_underscored(in_path) => {
+                state.read_paths.insert(in_path.to_path_buf());
+                LUA_SHEBANG.get().unwrap().process(in_path)?;
             }
+            _ if !is_underscored(in_path) => {
+                state.read_paths.insert(in_path.to_path_buf());
+                fs::copy(in_path, out_path)?;
+            }
+            _ => (),
         }
     }
 
