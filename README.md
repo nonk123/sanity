@@ -21,4 +21,23 @@ Run with `--server` to run a development server. Implies `--watch`.
 
 ## Scripting
 
-TODO TODO TODO
+There isn't much to scripting besides the custom `render` function. Take a look at this static blog example:
+
+```lua
+local blog = {
+    ["nice-day"] = {
+        "date": "today",
+        "contents": "I had a nice day today."
+    }
+}
+
+for id, post in pairs(blog) do
+    render("_article.html", "blog/" .. id .. ".html", {
+        id = id,
+        date = post.date,
+        contents = post.contents,
+    });
+end
+```
+
+`render` takes a template name to render, where to write the output (relative to `dist`), and what context to supply to it. (You can use `date` and `contents` from above using the `{{ name }}` mustache syntax inside your template.)
