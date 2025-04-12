@@ -118,6 +118,7 @@ fn walk(branch: &Path, state: &mut State) -> Result<()> {
         }
     } else if !state.read_paths.contains(branch) {
         let ext = branch.extension().and_then(|x| x.to_str());
+        let underscored = is_underscored(branch);
 
         match ext {
             Some("j2") => {
@@ -131,18 +132,18 @@ fn walk(branch: &Path, state: &mut State) -> Result<()> {
                 let source = fs::read_to_string(branch)?;
                 state.templates.insert(name, source);
             }
-            Some("scss") if !is_underscored(branch) => {
+            Some("scss") if !underscored => {
                 let input = fs::read_to_string(branch)?;
                 let data = grass::from_string(input, &grass::Options::default())?;
 
                 out_path.set_extension("css");
                 fs::write(out_path, data)?;
             }
-            Some("lua") if !is_underscored(branch) => {
+            Some("lua") if !underscored => {
                 LUA_SHEBANG.get().unwrap().process(branch)?;
             }
             _ => {
-                if !is_underscored(branch) {
+                if !underscored {
                     fs::copy(branch, out_path)?;
                 }
             }
