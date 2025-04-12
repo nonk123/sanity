@@ -31,6 +31,10 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: leafo/gh-actions-lua@v11
+        with:
+          luaVersion: "luajit-2.1"
       - name: Build
         run: |
           cargo fetch --locked
