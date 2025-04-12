@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate log;
 
-use std::{net::SocketAddr, sync::OnceLock, time::Duration};
+use std::{net::SocketAddr, sync::OnceLock, thread, time::Duration};
 
 use clap::Parser;
 use color_eyre::eyre::eyre;
@@ -47,7 +47,7 @@ async fn main() -> Result<()> {
         }
     }
 
-    std::thread::spawn(watcher);
+    thread::spawn(watcher);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8000));
     let listener = TcpListener::bind(addr).await?;
@@ -57,7 +57,7 @@ async fn main() -> Result<()> {
         let (stream, _) = listener.accept().await?;
         let io = TokioIo::new(stream);
 
-        tokio::task::spawn(async move {
+        tokio::spawn(async move {
             if let Err(err) = http1::Builder::new()
                 .serve_connection(io, service_fn(http_service))
                 .await
@@ -117,7 +117,7 @@ fn watcher() -> Result<()> {
     info!("Watching {:?}", paths::www()?);
 
     loop {
-        std::thread::yield_now();
+        thread::yield_now();
     }
 }
 
