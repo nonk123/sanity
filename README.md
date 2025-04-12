@@ -48,3 +48,11 @@ You can also read JSON files inside `www` into Lua tables with e.g.:
 local blog = json("blog/db.json");
 -- the rest is the same as the example above...
 ```
+
+`read` can be used to store a text file's contents in a string:
+
+```lua
+local id = "nice-day";
+local contents = read("blog/" .. id .. ".txt");
+-- simile
+```

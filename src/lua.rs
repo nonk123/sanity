@@ -82,5 +82,17 @@ pub fn new() -> Result<Shebang> {
     })?;
     globals.set("json", json)?;
 
+    let read = lua.create_function(move |lua, path: String| {
+        let path = paths::www().unwrap().join(path);
+        match std::fs::read_to_string(&path) {
+            Ok(s) => Ok(Value::String(lua.create_string(s).unwrap())),
+            Err(err) => {
+                error!("read failed {:?}: {:?}", path, err);
+                Ok(Value::Nil)
+            }
+        }
+    })?;
+    globals.set("read", read)?;
+
     Ok(Shebang { lua, state: state0 })
 }
