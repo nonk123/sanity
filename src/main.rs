@@ -79,18 +79,17 @@ async fn http_service(
 ) -> core::result::Result<Response<Full<Bytes>>, Infallible> {
     let query = req.uri().path()[1..].to_string();
 
-    match _http_service(req).await {
+    match _http_service(req) {
         Ok(ok) => Ok(ok),
         Err(err) => {
             error!("{:?} -> {:?}", query, err);
-
             let fuckyou = format!(include_str!("error.html"), query, err);
             Ok(Response::new(Full::new(Bytes::from(fuckyou))))
         }
     }
 }
 
-async fn _http_service(req: Request<Incoming>) -> Result<Response<Full<Bytes>>> {
+fn _http_service(req: Request<Incoming>) -> Result<Response<Full<Bytes>>> {
     let in_path = req.uri().path()[1..].to_string();
     let mut out_path = paths::dist()?.join(in_path);
 
