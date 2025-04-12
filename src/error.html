@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>sanity error</title>
+        <style>
+            html,
+            body {{
+                margin: 0;
+                padding: 0;
+            }}
+
+            body {{
+                font: 16px "Times New Roman", serif;
+                width: 100vw;
+                height: 100vh;
+
+                display: flex;
+                flex-flow: column nowrap;
+                align-items: center;
+                justify-content: center;
+            }}
+
+            main {{
+                max-width: calc(min(100%, 600px));
+                border: 1px solid black;
+                padding: 1ex;
+            }}
+        </style>
+    </head>
+    <body>
+        <main>
+            <h1>sanity error</h1>
+            <p>Here's an error report you dummy.</p>
+            <p>Path: <code>{}</code></p>
+            <code>{}</code>
+        </main>
+    </body>
+</html>

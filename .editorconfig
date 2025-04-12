@@ -10,5 +10,5 @@ indent_style = space
 [*.yml]
 indent_size = 2
 
-[*.lua]
+[*.{lua,html,css}]
 indent_size = 4

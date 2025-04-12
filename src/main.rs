@@ -1,12 +1,17 @@
 #[macro_use]
 extern crate log;
 
-use std::{net::SocketAddr, sync::OnceLock, thread, time::Duration};
+use std::{convert::Infallible, net::SocketAddr, sync::OnceLock, thread, time::Duration};
 
 use clap::Parser;
 use color_eyre::eyre::eyre;
 use http_body_util::Full;
-use hyper::{Request, Response, body::Bytes, server::conn::http1, service::service_fn};
+use hyper::{
+    Request, Response,
+    body::{Bytes, Incoming},
+    server::conn::http1,
+    service::service_fn,
+};
 use hyper_util::rt::TokioIo;
 use log::LevelFilter;
 use notify::RecursiveMode;
@@ -61,19 +66,31 @@ async fn main() -> Result<()> {
         let io = TokioIo::new(stream);
 
         tokio::spawn(async move {
-            if let Err(err) = http1::Builder::new()
+            http1::Builder::new()
                 .serve_connection(io, service_fn(http_service))
                 .await
-            {
-                error!("{:?}", err);
-            }
+                .unwrap();
         });
     }
 }
 
 async fn http_service(
-    req: Request<hyper::body::Incoming>,
-) -> core::result::Result<Response<Full<Bytes>>, color_eyre::Report> {
+    req: Request<Incoming>,
+) -> core::result::Result<Response<Full<Bytes>>, Infallible> {
+    let in_path = req.uri().path()[1..].to_string();
+
+    match _http_service(req).await {
+        Ok(ok) => Ok(ok),
+        Err(err) => {
+            error!("{:?} -> {:?}", in_path, err);
+
+            let fuckyou = format!(include_str!("error.html"), in_path, err);
+            Ok(Response::new(Full::new(Bytes::from(fuckyou))))
+        }
+    }
+}
+
+async fn _http_service(req: Request<Incoming>) -> Result<Response<Full<Bytes>>> {
     let in_path = req.uri().path()[1..].to_string();
     let mut out_path = paths::dist()?.join(in_path);
 
