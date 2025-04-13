@@ -72,10 +72,12 @@ async fn main() -> Result<()> {
         let io = TokioIo::new(stream);
 
         tokio::spawn(async move {
-            http1::Builder::new()
+            if let Err(err) = http1::Builder::new()
                 .serve_connection(io, service_fn(http_service))
                 .await
-                .unwrap();
+            {
+                warn!("Failed to serve a connection: {:?}", err);
+            }
         });
     }
 }
