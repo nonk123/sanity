@@ -58,3 +58,13 @@ local id = "nice-day";
 local contents = read("blog/" .. id .. ".txt");
 -- simile
 ```
+
+## Misc. usage
+
+You can check for the `__prod` boolean in your templates to exclude e.g. analytics from local builds:
+
+```html
+{% if __prod %}
+<script src="/analytics.js"></script>
+{% endif }
+```

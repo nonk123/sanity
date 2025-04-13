@@ -84,7 +84,14 @@ fn render(
     let parent = target.parent().ok_or(eyre!("No parent directory???"))?;
     let _ = fs::create_dir_all(parent);
 
-    let data = env.get_template(template)?.render(context.clone())?;
+    let context = minijinja::value::merge_maps([
+        context.clone(),
+        context! {
+            __prod => crate::args().prod(),
+        },
+    ]);
+
+    let data = env.get_template(template)?.render(context)?;
     fs::write(target, data)?;
 
     Ok(())

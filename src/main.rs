@@ -29,6 +29,8 @@ pub struct Args {
     watch: bool,
     #[arg(short, long)]
     server: bool,
+    #[arg(short, long)]
+    force_prod: bool,
 }
 
 pub type Result<T> = color_eyre::eyre::Result<T>;
@@ -75,6 +77,12 @@ async fn main() -> Result<()> {
                 .await
                 .unwrap();
         });
+    }
+}
+
+impl Args {
+    pub fn prod(&self) -> bool {
+        self.force_prod || (!self.server && !self.watch)
     }
 }
 
