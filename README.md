@@ -40,7 +40,9 @@ for id, post in pairs(blog) do
 end
 ```
 
-`render` takes a template (path relative to `www`) to add to the render queue, its output path (relative to `dist`), and a context to supply to it (`id`, `date`, and `contents` above can be referenced within the template using the mustache syntax: `{{ contents }}`).
+`render` takes a template (relative to `www`) to add to the _render queue_, its output path (relative to `dist`), and a context to supply to it. Fields `id`, `date`, and `contents` from the example above can be referenced within the template using the mustache syntax: `{{ id }}`, `{{ date }}`, `{{ contents }}`.
+
+Note the italics: the `render` function doesn't render immediately. Templates are rendered after all else, ensuring you can reference any template from another through inclusion or extension.
 
 You can also read JSON files inside `www` by using the `json` function:
 
