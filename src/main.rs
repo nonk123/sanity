@@ -60,7 +60,13 @@ async fn main() -> Result<()> {
     info!("Hosting dev-server on http://{}", addr);
 
     loop {
-        let (stream, _) = listener.accept().await?;
+        let (stream, addr) = listener.accept().await?;
+
+        if !addr.ip().is_loopback() {
+            warn!("We don't tolerate outsiders here: {:?}", addr);
+            continue;
+        }
+
         let io = TokioIo::new(stream);
 
         tokio::spawn(async move {
