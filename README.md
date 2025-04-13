@@ -1,23 +1,23 @@
 # sanity
 
-The only sane static site generator in existence. Here's what it does for you:
+The only sane static site generator in existence.
 
-- Process SCSS to CSS using [grass](https://github.com/connorskees/grass).
-- Render Jinja2 templates with [minijinja](https://github.com/mitsuhiko/minijinja).
-- Run [Lua scripts](#scripting) with [mlua](https://github.com/mlua-rs/mlua).
+Here's what it does for you:
+
+- Process [SCSS](https://sass-lang.com/documentation/syntax) to CSS using [grass](https://github.com/connorskees/grass).
+- Render [Jinja2](https://jinja.palletsprojects.com/en/stable/templates) templates with [minijinja](https://github.com/mitsuhiko/minijinja).
+- Run [Lua scripts](#scripting) with [mlua](https://github.com/mlua-rs/mlua) (uses [LuaJIT](https://luajit.org/) as the backend).
 - Leave other files alone and copy them as-is.
 
 Directories are walked recursively depth-first, with files processed and directories read in an alphanumeric order.
 
-Files prefixed with `_` are excluded from SCSS/Jinja2 rendering. (Useful for a "base" HTML template you don't want rendered, only extended.)
+Files prefixed with `_` are excluded from SCSS/Jinja2/Lua processing and aren't copied. This is useful for a "base" HTML template you don't want a copy of rendered, or if you render the template programmatically.
 
 ## Usage
 
 Put your files inside the `www` folder in your project directory. Run the provided binary. You should get a fully processed site inside the `dist` folder.
 
-Run with `--watch` to auto-rebuild your site on file changes.
-
-Run with `--server` to run a development server. Implies `--watch`.
+Run with `--watch` to auto-rebuild your site on file changes. Run with `--server` to run a development server (implies `--watch`).
 
 ## Scripting
 
@@ -40,9 +40,9 @@ for id, post in pairs(blog) do
 end
 ```
 
-`render` takes a template name to render, where to write the output (relative to `dist`), and what context to supply to it. (You can use `date` and `contents` from above using the `{{ name }}` mustache syntax inside your template.)
+`render` takes a template (path relative to `www`) to add to the render queue, its output path (relative to `dist`), and a context to supply to it (`id`, `date`, and `contents` above can be referenced within the template using the mustache syntax: `{{ contents }}`).
 
-You can also read JSON files inside `www` into Lua tables with e.g.:
+You can also read JSON files inside `www` by using the `json` function:
 
 ```lua
 local blog = json("blog/db.json");
