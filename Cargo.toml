@@ -23,4 +23,4 @@ mlua = { version = "0.10", features = [
     "error-send",
 ] }
 serde = { version = "1", features = ["alloc"] }
-serde_json = { version = "1.0.140", features = ["alloc"] }
+serde_json = { version = "1", features = ["alloc"] }

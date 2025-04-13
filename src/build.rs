@@ -1,5 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
+    ffi::OsStr,
     fs,
     path::{Path, PathBuf},
 };
@@ -36,8 +37,8 @@ pub fn run() -> Result<()> {
     let mut state = State {
         lua: LuaShebang::try_new()?,
         templates: HashMap::new(),
-        read_paths: HashSet::new(),
-        env: Environment::new(),
+        processed_items: HashSet::new(),
+        jinja_env: Environment::new(),
     };
 
     walk(&paths::www()?, &mut state)?;
@@ -45,18 +46,18 @@ pub fn run() -> Result<()> {
     let State {
         lua,
         templates,
-        mut env,
+        mut jinja_env,
         ..
     } = state;
 
-    let names: HashSet<String> = templates.keys().map(String::to_string).collect();
-    env.set_loader(move |name| Ok(templates.get(name).map(String::to_string)));
+    let names: HashSet<_> = templates.keys().map(String::to_string).collect();
+    jinja_env.set_loader(move |name| Ok(templates.get(name).map(String::to_string)));
 
     for name in names {
         let target = paths::dist()?.join(&name);
 
         if !is_underscored(&target) {
-            render(&env, &name, &target, &context! {})?; // TODO: user-defined context
+            render(&jinja_env, &name, &target, &context! {})?; // TODO: user-defined context
         }
     }
 
@@ -68,7 +69,7 @@ pub fn run() -> Result<()> {
         context,
     } in &lua_state.render_queue
     {
-        render(&env, template, target, context)?;
+        render(&jinja_env, template, target, context)?;
     }
 
     Ok(())
@@ -80,16 +81,19 @@ fn render(
     target: &Path,
     context: &minijinja::Value,
 ) -> Result<()> {
-    let _ = fs::create_dir_all(target.parent().ok_or(eyre!("No parent directory???"))?);
+    let parent = target.parent().ok_or(eyre!("No parent directory???"))?;
+    let _ = fs::create_dir_all(parent);
+
     let data = env.get_template(template)?.render(context.clone())?;
     fs::write(target, data)?;
+
     Ok(())
 }
 
 struct State {
     templates: HashMap<String, String>, // workaround to using owned template sources
-    read_paths: HashSet<PathBuf>,
-    env: Environment<'static>,
+    processed_items: HashSet<PathBuf>,
+    jinja_env: Environment<'static>,
     lua: LuaShebang,
 }
 
@@ -110,10 +114,10 @@ fn walk(branch: &Path, state: &mut State) -> Result<()> {
         for child in ls {
             walk(&child, state)?;
         }
-    } else if !state.read_paths.contains(branch) {
-        state.read_paths.insert(branch.to_path_buf());
+    } else if !state.processed_items.contains(branch) {
+        state.processed_items.insert(branch.to_path_buf());
 
-        let ext = branch.extension().and_then(|x| x.to_str());
+        let ext = branch.extension().and_then(OsStr::to_str);
         let underscored = is_underscored(branch);
 
         match ext {
@@ -122,7 +126,7 @@ fn walk(branch: &Path, state: &mut State) -> Result<()> {
                     .with_extension("")
                     .strip_prefix(paths::dist()?)?
                     .to_str()
-                    .ok_or_else(|| eyre!("File names should be UTF-8"))?
+                    .ok_or(eyre!("File names should be UTF-8"))?
                     .to_string();
 
                 let source = fs::read_to_string(branch)?;
@@ -151,7 +155,7 @@ fn walk(branch: &Path, state: &mut State) -> Result<()> {
 
 fn is_underscored(path: &Path) -> bool {
     path.file_name()
-        .and_then(|x| x.to_str())
+        .and_then(OsStr::to_str)
         .map(|x| x.starts_with("_"))
         .unwrap_or(false)
 }
