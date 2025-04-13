@@ -98,7 +98,7 @@ fn _http_service(req: Request<Incoming>) -> Result<Response<Full<Bytes>>> {
     let mut out_path = paths::dist()?.join(in_path);
 
     if !out_path.exists() {
-        return Err(eyre!("File or directory doesn't exist {:?}", out_path));
+        return Err(eyre!("File or directory doesn't exist: {:?}", out_path));
     }
 
     if out_path.is_dir() {
