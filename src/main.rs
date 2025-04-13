@@ -45,8 +45,6 @@ async fn main() -> Result<()> {
     args0.watch |= args0.server;
     ARGS.set(args0).unwrap();
 
-    build::preflight()?;
-
     if !args().server {
         if args().watch {
             return watcher();

@@ -20,13 +20,13 @@ pub struct Shebang {
 }
 
 impl Shebang {
+    pub fn try_new() -> Result<Self> {
+        try_new_shebang()
+    }
+
     pub fn process(&self, file: &Path) -> Result<()> {
         self.lua.load(file).exec()?;
         Ok(())
-    }
-
-    pub fn postbuild_cleanup(&self) {
-        *self.state.lock().unwrap() = State::new();
     }
 }
 
@@ -34,23 +34,21 @@ pub struct State {
     pub render_queue: Vec<Render>,
 }
 
-impl State {
-    fn new() -> Self {
-        Self {
-            render_queue: Vec::new(),
-        }
-    }
-}
-
-pub fn new() -> Result<Shebang> {
+fn try_new_shebang() -> Result<Shebang> {
     let lua = Lua::new();
     let globals = lua.globals();
 
-    let state0 = Arc::new(Mutex::new(State::new()));
+    let _state = Arc::new(Mutex::new(State {
+        render_queue: Vec::new(),
+    }));
 
-    let state = state0.clone();
+    let state = Arc::downgrade(&_state);
     let render = lua.create_function(
         move |_, (template, target, context): (String, String, Value)| {
+            let Some(state) = state.upgrade() else {
+                unreachable!();
+            };
+
             trace!("lua render: {:?} {:?} => {:?}", template, target, context);
 
             state.lock().unwrap().render_queue.push(Render {
@@ -85,7 +83,10 @@ pub fn new() -> Result<Shebang> {
     let read = lua.create_function(move |lua, path: String| {
         let path = paths::www().unwrap().join(path);
         match std::fs::read_to_string(&path) {
-            Ok(s) => Ok(Value::String(lua.create_string(s).unwrap())),
+            Ok(s) => {
+                let s = lua.create_string(s).unwrap();
+                Ok(Value::String(s))
+            }
             Err(err) => {
                 error!("read failed {:?}: {:?}", path, err);
                 Ok(Value::Nil)
@@ -94,5 +95,5 @@ pub fn new() -> Result<Shebang> {
     })?;
     globals.set("read", read)?;
 
-    Ok(Shebang { lua, state: state0 })
+    Ok(Shebang { lua, state: _state })
 }

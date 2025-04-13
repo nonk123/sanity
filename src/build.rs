@@ -2,7 +2,6 @@ use std::{
     collections::{HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
-    sync::OnceLock,
 };
 
 use color_eyre::eyre::eyre;
@@ -10,25 +9,11 @@ use minijinja::{Environment, context};
 
 use crate::{
     Result,
-    lua::{Render, Shebang},
+    lua::{Render, Shebang as LuaShebang},
     paths,
 };
 
-// Limited to a single instance because the closures moving an `Arc` would cause memory leaks on repeated usage.
-static LUA_SHEBANG: OnceLock<Shebang> = OnceLock::new();
-
-pub fn preflight() -> Result<()> {
-    LUA_SHEBANG
-        .set(crate::lua::new()?)
-        .map_err(|_| eyre!("Failed to initialize the Lua shebang"))?;
-    Ok(())
-}
-
-fn postbuild_cleanup() {
-    LUA_SHEBANG.get().unwrap().postbuild_cleanup();
-}
-
-fn _run() -> Result<()> {
+pub fn run() -> Result<()> {
     if !paths::www()?.exists() {
         return Err(eyre!(
             "Please create and populate the www directory: {:?}",
@@ -49,6 +34,7 @@ fn _run() -> Result<()> {
     }
 
     let mut state = State {
+        lua: LuaShebang::try_new()?,
         templates: HashMap::new(),
         read_paths: HashSet::new(),
         env: Environment::new(),
@@ -57,7 +43,10 @@ fn _run() -> Result<()> {
     walk(&paths::www()?, &mut state)?;
 
     let State {
-        templates, mut env, ..
+        lua,
+        templates,
+        mut env,
+        ..
     } = state;
 
     let names: HashSet<String> = templates.keys().map(String::to_string).collect();
@@ -71,13 +60,13 @@ fn _run() -> Result<()> {
         }
     }
 
-    let state = LUA_SHEBANG.get().unwrap().state.lock().unwrap();
+    let lua_state = lua.state.lock().unwrap();
 
     for Render {
         template,
         target,
         context,
-    } in &state.render_queue
+    } in &lua_state.render_queue
     {
         render(&env, template, target, context)?;
     }
@@ -97,16 +86,11 @@ fn render(
     Ok(())
 }
 
-pub fn run() -> Result<()> {
-    let result = _run();
-    postbuild_cleanup();
-    result
-}
-
 struct State {
     templates: HashMap<String, String>, // workaround to using owned template sources
     read_paths: HashSet<PathBuf>,
     env: Environment<'static>,
+    lua: LuaShebang,
 }
 
 fn walk(branch: &Path, state: &mut State) -> Result<()> {
@@ -127,6 +111,8 @@ fn walk(branch: &Path, state: &mut State) -> Result<()> {
             walk(&child, state)?;
         }
     } else if !state.read_paths.contains(branch) {
+        state.read_paths.insert(branch.to_path_buf());
+
         let ext = branch.extension().and_then(|x| x.to_str());
         let underscored = is_underscored(branch);
 
@@ -150,7 +136,7 @@ fn walk(branch: &Path, state: &mut State) -> Result<()> {
                 fs::write(out_path, data)?;
             }
             Some("lua") if !underscored => {
-                LUA_SHEBANG.get().unwrap().process(branch)?;
+                state.lua.process(branch)?;
             }
             _ => {
                 if !underscored {
@@ -158,8 +144,6 @@ fn walk(branch: &Path, state: &mut State) -> Result<()> {
                 }
             }
         }
-
-        state.read_paths.insert(branch.to_path_buf());
     }
 
     Ok(())
