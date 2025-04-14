@@ -2,7 +2,7 @@ use std::{
     collections::{HashMap, HashSet},
     ffi::OsStr,
     fs,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
 };
 
 use color_eyre::eyre::eyre;
@@ -129,12 +129,26 @@ fn walk(branch: &Path, state: &mut State) -> Result<()> {
 
         match ext {
             Some("j2") => {
-                let name = out_path
-                    .with_extension("")
-                    .strip_prefix(paths::dist()?)?
-                    .to_str()
-                    .ok_or(eyre!("File names should be UTF-8"))?
-                    .to_string();
+                let name = {
+                    let mut name = String::new();
+
+                    let base = branch.with_extension("");
+                    let components = base.strip_prefix(paths::www()?)?.components();
+
+                    for comp in components {
+                        let Component::Normal(x) = comp else {
+                            continue;
+                        };
+
+                        if !name.is_empty() {
+                            name += "/";
+                        }
+
+                        name += &String::from_utf8(x.as_encoded_bytes().iter().cloned().collect())?;
+                    }
+
+                    name
+                };
 
                 let source = fs::read_to_string(branch)?;
                 state.templates.insert(name, source);
