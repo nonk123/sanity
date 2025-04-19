@@ -129,45 +129,23 @@ fn walk(branch: &Path, state: &mut State) -> Result<()> {
 
         match ext {
             Some("j2") => {
-                let name = {
-                    let mut name = String::new();
-
-                    let base = branch.with_extension("");
-                    let components = base.strip_prefix(paths::www()?)?.components();
-
-                    for comp in components {
-                        let Component::Normal(x) = comp else {
-                            continue;
-                        };
-
-                        if !name.is_empty() {
-                            name += "/";
-                        }
-
-                        name += &String::from_utf8(x.as_encoded_bytes().iter().cloned().collect())?;
-                    }
-
-                    name
-                };
-
+                let name = template_name(branch)?;
                 let source = fs::read_to_string(branch)?;
                 state.templates.insert(name, source);
             }
             Some("scss") if !underscored => {
                 let input = fs::read_to_string(branch)?;
                 let data = grass::from_string(input, &grass::Options::default())?;
-
                 out_path.set_extension("css");
                 fs::write(out_path, data)?;
             }
             Some("lua") if !underscored => {
                 state.lua.process(branch)?;
             }
-            _ => {
-                if !underscored {
-                    fs::copy(branch, out_path)?;
-                }
+            _ if !underscored => {
+                fs::copy(branch, out_path)?;
             }
+            _ => (),
         }
     }
 
@@ -179,4 +157,25 @@ fn is_underscored(path: &Path) -> bool {
         .and_then(OsStr::to_str)
         .map(|x| x.starts_with("_"))
         .unwrap_or(false)
+}
+
+fn template_name(path: &Path) -> Result<String> {
+    let mut name = String::new();
+
+    let base = path.with_extension("");
+    let components = base.strip_prefix(paths::www()?)?.components();
+
+    for comp in components {
+        let Component::Normal(x) = comp else {
+            continue;
+        };
+
+        if !name.is_empty() {
+            name += "/";
+        }
+
+        name += &String::from_utf8(x.as_encoded_bytes().iter().cloned().collect())?;
+    }
+
+    Ok(name)
 }
