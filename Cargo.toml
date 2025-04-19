@@ -24,3 +24,7 @@ mlua = { version = "0.10", features = [
 ] }
 serde = { version = "1", features = ["alloc"] }
 serde_json = { version = "1", features = ["alloc"] }
+
+[target.'cfg(windows)'.dependencies.mlua]
+version = "0.10"
+features = ["vendored"]
