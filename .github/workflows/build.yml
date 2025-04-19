@@ -34,7 +34,7 @@ jobs:
       - name: Build
         run: |
           cargo fetch --locked
-          cargo build --release
+          cargo build --features mlua/vendored --release
       - name: Save dependencies cache
         uses: actions/cache/save@v4
         with:
