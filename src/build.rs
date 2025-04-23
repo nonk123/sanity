@@ -6,7 +6,7 @@ use std::{
 };
 
 use color_eyre::eyre::eyre;
-use minijinja::{Environment, context};
+use minijinja::{Environment, context, value::merge_maps};
 
 use crate::{
     Result,
@@ -53,11 +53,15 @@ pub fn run() -> Result<()> {
     let names: HashSet<_> = templates.keys().map(String::to_string).collect();
     jinja_env.set_loader(move |name| Ok(templates.get(name).map(String::to_string)));
 
+    let global_context =
+        minijinja::Value::from_serialize(&lua.state.lock().unwrap().global_context);
+    let merge = |x: &minijinja::Value| merge_maps([global_context.clone(), x.clone()]);
+
     for name in names {
         let target = paths::dist()?.join(&name);
 
         if !is_underscored(&target) {
-            render(&jinja_env, &name, &target, &context! {})?; // TODO: user-defined context
+            render(&jinja_env, &name, &target, &merge(&context! {}))?;
         }
     }
 
@@ -69,7 +73,7 @@ pub fn run() -> Result<()> {
         context,
     } in &lua_state.render_queue
     {
-        render(&jinja_env, template, target, context)?;
+        render(&jinja_env, template, target, &merge(context))?;
     }
 
     Ok(())
@@ -84,11 +88,11 @@ fn render(
     let parent = target.parent().ok_or(eyre!("No parent directory???"))?;
     let _ = fs::create_dir_all(parent);
 
-    let context = minijinja::value::merge_maps([
-        context.clone(),
+    let context = merge_maps([
         context! {
-            __prod => crate::args().prod(),
+            __prod => crate::args().prod()
         },
+        context.clone(),
     ]);
 
     let data = env.get_template(template)?.render(context)?;

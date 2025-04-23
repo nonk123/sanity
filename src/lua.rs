@@ -1,9 +1,11 @@
 use std::{
+    collections::HashMap,
     fs::File,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
 };
 
+use minijinja::Value as JValue;
 use mlua::{Lua, LuaSerdeExt, Value};
 
 use crate::{Result, paths};
@@ -11,7 +13,7 @@ use crate::{Result, paths};
 pub struct Render {
     pub template: String,
     pub target: PathBuf,
-    pub context: minijinja::Value,
+    pub context: JValue,
 }
 
 pub struct Shebang {
@@ -32,6 +34,7 @@ impl Shebang {
 
 pub struct State {
     pub render_queue: Vec<Render>,
+    pub global_context: HashMap<String, JValue>,
 }
 
 fn try_new_shebang() -> Result<Shebang> {
@@ -40,6 +43,7 @@ fn try_new_shebang() -> Result<Shebang> {
 
     let _state = Arc::new(Mutex::new(State {
         render_queue: Vec::new(),
+        global_context: HashMap::new(),
     }));
 
     let state = Arc::downgrade(&_state);
@@ -52,7 +56,7 @@ fn try_new_shebang() -> Result<Shebang> {
             trace!("lua render: {:?} {:?} => {:?}", template, target, context);
 
             state.lock().unwrap().render_queue.push(Render {
-                context: minijinja::Value::from_serialize(context),
+                context: JValue::from_serialize(context),
                 target: paths::dist().unwrap().join(target),
                 template,
             });
@@ -65,7 +69,7 @@ fn try_new_shebang() -> Result<Shebang> {
     let json = lua.create_function(move |lua, path: String| {
         fn inner(lua: &Lua, path: &Path) -> Result<Value> {
             let file = File::open(path)?;
-            let serde: minijinja::Value = serde_json::from_reader(file)?; // INSANE hack
+            let serde: JValue = serde_json::from_reader(file)?; // INSANE hack
             Ok(lua.to_value(&serde)?)
         }
 
@@ -94,6 +98,22 @@ fn try_new_shebang() -> Result<Shebang> {
         }
     })?;
     globals.set("read", read)?;
+
+    let state = Arc::downgrade(&_state);
+    let inject = lua.create_function(move |_, (name, value): (String, Value)| {
+        let Some(state) = state.upgrade() else {
+            unreachable!();
+        };
+
+        state
+            .lock()
+            .unwrap()
+            .global_context
+            .insert(name, JValue::from_serialize(value));
+
+        Ok(Value::Nil)
+    })?;
+    globals.set("inject", inject)?;
 
     Ok(Shebang { lua, state: _state })
 }

@@ -59,6 +59,12 @@ local contents = read("blog/" .. id .. ".txt");
 -- simile
 ```
 
+`inject` can be used to add/modify variables shared across all templates:
+
+```lua
+inject("last_updated", os.date("%Y-%m-%d"));
+```
+
 ## Misc. usage
 
 You can check for the `__prod` boolean in your templates to exclude e.g. analytics from local builds:
