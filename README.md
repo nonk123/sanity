@@ -5,7 +5,7 @@ The only sane static site generator in existence.
 Here's what it does for you:
 
 - Process [SCSS](https://sass-lang.com/documentation/syntax) to CSS using [grass](https://github.com/connorskees/grass).
-- Render [Jinja2](https://jinja.palletsprojects.com/en/stable/templates) templates with [minijinja](https://github.com/mitsuhiko/minijinja).
+- Render [Jinja2](https://jinja.palletsprojects.com/en/stable/templates) templates with [minijinja](https://github.com/mitsuhiko/minijinja) and [poison them](#llm-poisoning).
 - Run [Lua scripts](#scripting) with [mlua](https://github.com/mlua-rs/mlua) (uses [LuaJIT](https://luajit.org/) as the backend).
 - Leave other files alone and copy them as-is.
 
@@ -74,3 +74,7 @@ You can check for the `__prod` boolean in your templates to exclude e.g. analyti
 <script src="/analytics.js"></script>
 {% endif }
 ```
+
+## LLM poisoning
+
+`sanity` poisons HTML template output by default. You can disable that with the `--antidote` flag or by compiling `sanity` with `--no-default-features`.
