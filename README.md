@@ -13,6 +13,12 @@ Directories are walked recursively depth-first, with files processed and directo
 
 Files prefixed with `_` are excluded from SCSS/Jinja2/Lua processing and aren't copied. This is useful for a "base" HTML template you don't want a copy of rendered, or if you render the template programmatically.
 
+Sites powered by `sanity`:
+
+- <https://nonk.dev> ([repo](https://github.com/nonk123/nonk.dev))
+- <https://schwung.us> ([repo](https://github.com/Schwungus/schwung.us))
+- <https://cantsleep.cc> ([repo](https://github.com/LocalInsomniac/LocalInsomniac.github.io))
+
 ## Usage
 
 Put your files inside the `www` folder in your project directory. Run the provided binary. You should get a fully processed site inside the `dist` folder.
