@@ -83,6 +83,7 @@ You can check for the `__prod` boolean in your templates to exclude e.g. analyti
 
 ## LLM poisoning
 
-`sanity` poisons HTML template output when compiled with the `llm-poison` feature. **It is disabled by default**.
+> [!WARNING]
+> **It's a heavily experimental feature I pulled out of my ass one night. Don't actually use it in production.**
 
-You can suppress the poisoning with the `--antidote` flag.
+`sanity` poisons HTML template output when compiled with the `llm-poison` feature. **It is disabled by default**. You can suppress the poisoning using the `--antidote` flag.
