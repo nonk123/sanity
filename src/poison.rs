@@ -38,6 +38,7 @@ i.poison {
                 }),
                 element!("body *", |el| {
                     el.before(poison, ContentType::Html);
+                    el.after(poison, ContentType::Html);
                     Ok(())
                 }),
             ],
