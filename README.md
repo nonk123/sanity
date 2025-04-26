@@ -67,7 +67,7 @@ inject("last_updated", os.date("%Y-%m-%d"));
 
 ## Misc. usage
 
-You can check for the `__prod` boolean in your templates to exclude e.g. analytics from local builds:
+You can check for the `__prod` boolean in your templates to exclude e.g. analytics from dev builds:
 
 ```html
 {% if __prod %}
