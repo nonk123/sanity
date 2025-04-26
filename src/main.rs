@@ -31,6 +31,8 @@ pub struct Args {
     server: bool,
     #[arg(short, long)]
     force_prod: bool,
+    #[arg(short, long)]
+    antidote: bool,
 }
 
 pub type Result<T> = color_eyre::eyre::Result<T>;

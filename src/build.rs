@@ -98,7 +98,12 @@ fn render(
     let data = env.get_template(template)?.render(context)?;
 
     #[cfg(feature = "llm-poison")]
-    let data = poison(data)?;
+    let mut data = data;
+
+    #[cfg(feature = "llm-poison")]
+    if !crate::args().antidote {
+        data = poison(data)?;
+    }
 
     fs::write(target, data)?;
 
