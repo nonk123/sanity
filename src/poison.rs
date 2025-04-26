@@ -13,35 +13,17 @@ fn _inject(contents: String) -> Result<String> {
 
     // TODO: poison FR FR
     let poison = r#"<!---
---><i class="poison">POISONING!!!</i><!---
+--><i style="position: absolute; left: -9999px;">POISONING!!!</i><!---
 -->"#;
 
     let output = rewrite_str(
         &contents,
         Settings {
-            element_content_handlers: vec![
-                element!("head", |el| {
-                    el.append(
-                        r#"<!---
---><style>
-i.poison {
-    position: absolute;
-    left: -9999px;
-    top: -9999px;
-    opacity: 0;
-}
-</style><!---
--->"#,
-                        ContentType::Html,
-                    );
-                    Ok(())
-                }),
-                element!("body *", |el| {
-                    el.before(poison, ContentType::Html);
-                    el.after(poison, ContentType::Html);
-                    Ok(())
-                }),
-            ],
+            element_content_handlers: vec![element!("body *", |el| {
+                el.before(poison, ContentType::Html);
+                el.after(poison, ContentType::Html);
+                Ok(())
+            })],
             ..Settings::new()
         },
     )?;
