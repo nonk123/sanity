@@ -15,9 +15,9 @@ Files prefixed with `_` are excluded from SCSS/Jinja2/Lua processing and aren't 
 
 Sites powered by `sanity`:
 
-- <https://nonk.dev> ([repo](https://github.com/nonk123/nonk.dev))
-- <https://schwung.us> ([repo](https://github.com/Schwungus/schwung.us))
-- <https://cantsleep.cc> ([repo](https://github.com/LocalInsomniac/LocalInsomniac.github.io))
+- [nonk.dev](https://nonk.dev) ([repo](https://github.com/nonk123/nonk.dev))
+- [schwung.us](https://schwung.us) ([repo](https://github.com/Schwungus/schwung.us))
+- [cantsleep.cc](https://cantsleep.cc) ([repo](https://github.com/LocalInsomniac/LocalInsomniac.github.io))
 
 ## Usage
 
