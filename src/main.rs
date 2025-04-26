@@ -21,6 +21,7 @@ use tokio::net::TcpListener;
 mod build;
 mod lua;
 mod paths;
+mod poison;
 
 #[derive(Parser, Debug, Clone)]
 #[command(version, about, long_about = None)]

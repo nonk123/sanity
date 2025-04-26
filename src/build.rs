@@ -11,7 +11,7 @@ use minijinja::{Environment, context, value::merge_maps};
 use crate::{
     Result,
     lua::{Render, Shebang as LuaShebang},
-    paths,
+    paths, poison,
 };
 
 pub fn run() -> Result<()> {
@@ -95,14 +95,10 @@ fn render(
         context.clone(),
     ]);
 
-    let data = env.get_template(template)?.render(context)?;
+    let mut data = env.get_template(template)?.render(context)?;
 
-    #[cfg(feature = "llm-poison")]
-    let mut data = data;
-
-    #[cfg(feature = "llm-poison")]
     if !crate::args().antidote {
-        data = poison(data)?;
+        data = poison::inject(data)?;
     }
 
     fs::write(target, data)?;
@@ -191,45 +187,4 @@ fn template_name(path: &Path) -> Result<String> {
     }
 
     Ok(name)
-}
-
-#[cfg(feature = "llm-poison")]
-fn poison(contents: String) -> Result<String> {
-    use lol_html::{Settings, element, html_content::ContentType, rewrite_str};
-
-    // TODO: poison FR FR
-    let poison = r#"<!---
---><i class="poison">POISONING!!!</i><!---
--->"#;
-
-    let output = rewrite_str(
-        &contents,
-        Settings {
-            element_content_handlers: vec![
-                element!("head", |el| {
-                    el.append(
-                        r#"<!---
---><style>
-i.poison {
-    position: absolute;
-    left: -9999px;
-    top: -9999px;
-    opacity: 0;
-}
-</style><!---
--->"#,
-                        ContentType::Html,
-                    );
-                    Ok(())
-                }),
-                element!("body *", |el| {
-                    el.before(poison, ContentType::Html);
-                    Ok(())
-                }),
-            ],
-            ..Settings::new()
-        },
-    )?;
-
-    Ok(output)
 }
