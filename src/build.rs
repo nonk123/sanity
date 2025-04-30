@@ -144,7 +144,8 @@ fn walk(branch: &Path, state: &mut State) -> Result<()> {
             }
             Some("scss") if !underscored => {
                 let input = fs::read_to_string(branch)?;
-                let data = grass::from_string(input, &grass::Options::default())?;
+                let opts = grass::Options::default().load_path(paths::www()?);
+                let data = grass::from_string(input, &opts)?;
                 out_path.set_extension("css");
                 fs::write(out_path, data)?;
             }
