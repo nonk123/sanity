@@ -34,6 +34,8 @@ pub struct Args {
     force_prod: bool,
     #[arg(short, long)]
     antidote: bool,
+    #[arg(short, long)]
+    lualib: bool,
 }
 
 pub type Result<T> = color_eyre::eyre::Result<T>;
@@ -49,6 +51,10 @@ async fn main() -> Result<()> {
     let mut args0 = Args::try_parse()?;
     args0.watch |= args0.server;
     ARGS.set(args0).unwrap();
+
+    if args().lualib {
+        std::fs::write(paths::root()?.join("_sanity.lua"), include_str!("lib.lua"))?;
+    }
 
     if !args().server {
         if args().watch {
