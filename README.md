@@ -25,6 +25,14 @@ Put your files inside the `www` folder in your project directory. Run the provid
 
 Run with `--watch` to auto-rebuild your site on file changes. Run with `--server` to run a development server (implies `--watch`).
 
+Use the `--lualib` flag to put a LuaLS definitions file in your project folder. This should hide the 999 warnings about undefined functions you've been getting. Make sure to point your IDE to this file, for example VSCode in your `settings.json`:
+
+```json
+{
+    "Lua.workspace.library": ["_sanity.lua"]
+}
+```
+
 ## Scripting
 
 There isn't much to scripting besides the custom `render` function. Take a look at this static blog example:
