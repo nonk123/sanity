@@ -53,8 +53,8 @@ pub fn run() -> Result<()> {
     let names: HashSet<_> = templates.keys().map(String::to_string).collect();
     jinja_env.set_loader(move |name| Ok(templates.get(name).map(String::to_string)));
 
-    let global_context =
-        minijinja::Value::from_serialize(&lua.state.lock().unwrap().global_context);
+    let lua = lua.state();
+    let global_context = minijinja::Value::from_serialize(&lua.global_context);
     let merge = |x: &minijinja::Value| merge_maps([global_context.clone(), x.clone()]);
 
     for name in names {
@@ -65,13 +65,11 @@ pub fn run() -> Result<()> {
         }
     }
 
-    let lua_state = lua.state.lock().unwrap();
-
     for Render {
         template,
         target,
         context,
-    } in &lua_state.render_queue
+    } in &lua.render_queue
     {
         render(&jinja_env, template, target, &merge(context))?;
     }

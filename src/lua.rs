@@ -2,7 +2,6 @@ use std::{
     collections::HashMap,
     fs::File,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex},
 };
 
 use minijinja::Value as JValue;
@@ -18,7 +17,6 @@ pub struct Render {
 
 pub struct Shebang {
     lua: Lua,
-    pub state: Arc<Mutex<State>>,
 }
 
 impl Shebang {
@@ -29,6 +27,10 @@ impl Shebang {
     pub fn process(&self, file: &Path) -> Result<()> {
         self.lua.load(file).exec()?;
         Ok(())
+    }
+
+    pub fn state(&self) -> State {
+        self.lua.remove_app_data().unwrap()
     }
 }
 
@@ -41,21 +43,17 @@ fn try_new_shebang() -> Result<Shebang> {
     let lua = Lua::new();
     let globals = lua.globals();
 
-    let _state = Arc::new(Mutex::new(State {
+    lua.set_app_data(State {
         render_queue: Vec::new(),
         global_context: HashMap::new(),
-    }));
+    });
 
-    let state = Arc::downgrade(&_state);
     let render = lua.create_function(
-        move |_, (template, target, context): (String, String, Value)| {
-            let Some(state) = state.upgrade() else {
-                unreachable!();
-            };
-
+        move |lua, (template, target, context): (String, String, Value)| {
             trace!("lua render: {:?} {:?} => {:?}", template, target, context);
 
-            state.lock().unwrap().render_queue.push(Render {
+            let mut state = lua.app_data_mut::<State>().unwrap();
+            state.render_queue.push(Render {
                 context: JValue::from_serialize(context),
                 target: paths::dist().unwrap().join(target),
                 template,
@@ -67,13 +65,13 @@ fn try_new_shebang() -> Result<Shebang> {
     globals.set("render", render)?;
 
     let json = lua.create_function(move |lua, path: String| {
-        fn inner(lua: &Lua, path: &Path) -> Result<Value> {
+        fn inner(lua: &Lua, path: &str) -> Result<Value> {
+            let path = paths::www().unwrap().join(path);
             let file = File::open(path)?;
             let serde: JValue = serde_json::from_reader(file)?; // INSANE hack
             Ok(lua.to_value(&serde)?)
         }
 
-        let path = paths::www().unwrap().join(path);
         match inner(lua, &path) {
             Ok(ok) => Ok(ok),
             Err(err) => {
@@ -99,14 +97,8 @@ fn try_new_shebang() -> Result<Shebang> {
     })?;
     globals.set("read", read)?;
 
-    let state = Arc::downgrade(&_state);
-    let inject = lua.create_function(move |_, (name, value): (String, Value)| {
-        let Some(state) = state.upgrade() else {
-            unreachable!();
-        };
-
-        state
-            .lock()
+    let inject = lua.create_function(move |lua, (name, value): (String, Value)| {
+        lua.app_data_mut::<State>()
             .unwrap()
             .global_context
             .insert(name, JValue::from_serialize(value));
@@ -115,5 +107,5 @@ fn try_new_shebang() -> Result<Shebang> {
     })?;
     globals.set("inject", inject)?;
 
-    Ok(Shebang { lua, state: _state })
+    Ok(Shebang { lua })
 }
