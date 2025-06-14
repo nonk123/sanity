@@ -3,6 +3,7 @@ use std::{
     ffi::OsStr,
     fs,
     path::{Component, Path, PathBuf},
+    sync::atomic::{AtomicBool, Ordering},
 };
 
 use color_eyre::eyre::eyre;
@@ -14,7 +15,20 @@ use crate::{
     paths, poison,
 };
 
+static BUILD_STATUS: AtomicBool = AtomicBool::new(false);
+
+pub fn in_progress() -> bool {
+    BUILD_STATUS.load(Ordering::Relaxed)
+}
+
 pub fn run() -> Result<()> {
+    BUILD_STATUS.store(true, Ordering::Relaxed);
+    let result = run_inner();
+    BUILD_STATUS.store(false, Ordering::Relaxed);
+    result
+}
+
+fn run_inner() -> Result<()> {
     if !paths::www()?.exists() {
         return Err(eyre!(
             "Please create and populate the www directory: {:?}",

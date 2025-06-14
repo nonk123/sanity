@@ -23,6 +23,8 @@ mod lua;
 mod paths;
 mod poison;
 
+const DEBOUNCE_TIMEOUT: Duration = Duration::from_millis(1000);
+
 #[derive(Parser, Debug, Clone)]
 #[command(version, about, long_about = None)]
 pub struct Args {
@@ -36,6 +38,12 @@ pub struct Args {
     antidote: bool,
     #[arg(short, long)]
     lualib: bool,
+}
+
+impl Args {
+    pub fn prod(&self) -> bool {
+        self.force_prod || (!self.server && !self.watch)
+    }
 }
 
 pub type Result<T> = color_eyre::eyre::Result<T>;
@@ -91,15 +99,13 @@ async fn main() -> Result<()> {
     }
 }
 
-impl Args {
-    pub fn prod(&self) -> bool {
-        self.force_prod || (!self.server && !self.watch)
-    }
-}
-
 async fn http_service(
     req: Request<Incoming>,
 ) -> core::result::Result<Response<Full<Bytes>>, Infallible> {
+    while build::in_progress() {
+        thread::yield_now();
+    }
+
     let query = req.uri().path()[1..].to_string();
 
     match _http_service(req) {
@@ -135,25 +141,26 @@ fn _http_service(req: Request<Incoming>) -> Result<Response<Full<Bytes>>> {
 fn watcher() -> Result<()> {
     rebuild();
 
-    let mut debouncer = new_debouncer(
-        Duration::from_millis(600),
-        None,
-        |result: DebounceEventResult| match result {
-            Ok(events) => {
-                for event in events {
-                    if !event.kind.is_access() {
-                        rebuild();
-                        break;
+    let mut debouncer =
+        new_debouncer(
+            DEBOUNCE_TIMEOUT,
+            None,
+            |result: DebounceEventResult| match result {
+                Ok(events) => {
+                    for event in events {
+                        if !event.kind.is_access() {
+                            rebuild();
+                            break;
+                        }
                     }
                 }
-            }
-            Err(errors) => {
-                for error in errors {
-                    error!("{:?}", error);
+                Err(errors) => {
+                    for error in errors {
+                        error!("{:?}", error);
+                    }
                 }
-            }
-        },
-    )?;
+            },
+        )?;
 
     debouncer.watch(&paths::www()?, RecursiveMode::Recursive)?;
     info!("Watching {:?}", paths::www()?);
