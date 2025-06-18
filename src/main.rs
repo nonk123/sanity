@@ -166,7 +166,7 @@ fn watcher() -> Result<()> {
     info!("Watching {:?}", paths::www()?);
 
     loop {
-        thread::yield_now();
+        thread::sleep(Duration::from_millis(100));
     }
 }
 
