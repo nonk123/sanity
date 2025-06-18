@@ -28,24 +28,30 @@ pub fn run() -> Result<()> {
     result
 }
 
+pub fn cleanup() -> Result<()> {
+    if !paths::dist()?.exists() {
+        return Ok(());
+    }
+
+    for child in fs::read_dir(paths::dist()?)? {
+        let child = child?.path();
+
+        if child.is_dir() {
+            fs::remove_dir_all(child)?;
+        } else {
+            fs::remove_file(child)?;
+        }
+    }
+
+    Ok(())
+}
+
 fn run_inner() -> Result<()> {
     if !paths::www()?.exists() {
         return Err(eyre!(
             "Please create and populate the www directory: {:?}",
             paths::www()?
         ));
-    }
-
-    if paths::dist()?.exists() {
-        for child in fs::read_dir(paths::dist()?)? {
-            let child = child?.path();
-
-            if child.is_dir() {
-                fs::remove_dir_all(child)?;
-            } else {
-                fs::remove_file(child)?;
-            }
-        }
     }
 
     let mut state = State {
@@ -126,13 +132,12 @@ struct State {
 }
 
 fn walk(branch: &Path, state: &mut State) -> Result<()> {
-    let mut out_path = paths::dist()?.join(branch.strip_prefix(paths::www()?)?);
+    let mut result = paths::dist()?.join(branch.strip_prefix(paths::www()?)?);
 
     if branch.is_dir() {
-        fs::create_dir_all(out_path)?;
+        let _ = fs::create_dir_all(result);
 
         let mut ls = Vec::with_capacity(64); // doesn't matter but im GREEDY
-
         for child in fs::read_dir(branch)? {
             ls.push(child?.path().canonicalize()?);
         }
@@ -158,14 +163,14 @@ fn walk(branch: &Path, state: &mut State) -> Result<()> {
                 let input = fs::read_to_string(branch)?;
                 let opts = grass::Options::default().load_path(paths::www()?);
                 let data = grass::from_string(input, &opts)?;
-                out_path.set_extension("css");
-                fs::write(out_path, data)?;
+                result.set_extension("css");
+                fs::write(result, data)?;
             }
             Some("lua") if !underscored => {
                 state.lua.process(branch)?;
             }
-            _ if !underscored => {
-                fs::copy(branch, out_path)?;
+            _ if !underscored && !result.exists() => {
+                fs::copy(branch, result)?;
             }
             _ => (),
         }

@@ -1,7 +1,10 @@
 #[macro_use]
 extern crate log;
 
-use std::{convert::Infallible, fs, net::SocketAddr, sync::OnceLock, thread, time::Duration};
+use std::{
+    collections::HashSet, convert::Infallible, fs, net::SocketAddr, sync::OnceLock, thread,
+    time::Duration,
+};
 
 use clap::Parser;
 use color_eyre::eyre::eyre;
@@ -14,8 +17,8 @@ use hyper::{
 };
 use hyper_util::rt::TokioIo;
 use log::LevelFilter;
-use notify::RecursiveMode;
-use notify_debouncer_full::{DebounceEventResult, new_debouncer};
+use notify::{EventKind, RecursiveMode};
+use notify_debouncer_full::{DebounceEventResult, DebouncedEvent, new_debouncer};
 use tokio::net::TcpListener;
 
 mod build;
@@ -61,9 +64,10 @@ async fn main() -> Result<()> {
     ARGS.set(args0).unwrap();
 
     if args().lualib {
-        std::fs::write(paths::root()?.join("_sanity.lua"), include_str!("lib.lua"))?;
+        fs::write(paths::root()?.join("_sanity.lua"), include_str!("lib.lua"))?;
     }
 
+    build::cleanup()?;
     if !args().server {
         if args().watch {
             return watcher();
@@ -138,6 +142,33 @@ fn _http_service(req: Request<Incoming>) -> Result<Response<Full<Bytes>>> {
     Ok(Response::new(Full::new(Bytes::from(data))))
 }
 
+fn process_events(events: Vec<DebouncedEvent>) -> Result<()> {
+    let mut targets = HashSet::new();
+
+    for event in events {
+        if !matches!(event.kind, EventKind::Remove(_) | EventKind::Modify(_)) {
+            continue;
+        }
+        for path in &event.paths {
+            let path = path.strip_prefix(paths::www()?)?;
+            let path = paths::dist()?.join(path);
+            if !path.is_dir() {
+                targets.insert(path);
+            }
+        }
+    }
+
+    let redo = !targets.is_empty();
+    for path in targets {
+        let _ = fs::remove_file(path);
+    }
+    if redo {
+        rebuild();
+    }
+
+    Ok(())
+}
+
 fn watcher() -> Result<()> {
     rebuild();
 
@@ -147,11 +178,8 @@ fn watcher() -> Result<()> {
             None,
             |result: DebounceEventResult| match result {
                 Ok(events) => {
-                    for event in events {
-                        if !event.kind.is_access() {
-                            rebuild();
-                            break;
-                        }
+                    if let Err(error) = process_events(events) {
+                        error!("{:?}", error);
                     }
                 }
                 Err(errors) => {
