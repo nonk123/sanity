@@ -1,0 +1,23 @@
+{# This is a "base" template. Since it's prefixed with an underscore, it is never rendered on its own. #}
+
+{# In Jinja2, you use blocks to define sections that can be overridden by child templates. #}
+{# Blocks can be left unspecified in the child template to use their default value. #}
+
+{# You can also reference a block's value more than once (i.e. repeat it) by using: `{{ self.block_name() }}` #}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>{% block title %}{% endblock %}</title>
+    {# NOTE: we're using the .css extension for rendered SCSS. #}
+    <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+    {% block content %}
+    <p>Empty...</p>
+    {% endblock %}
+</body>
+
+</html>

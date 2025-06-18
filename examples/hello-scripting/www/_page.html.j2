@@ -1,0 +1,27 @@
+{# Since this is an underscore-prefixed template, we won't be getting a `dist/_page.html` in our output. #}
+
+{# Here we use the `{{ name }}` syntax to reference the fields from our Lua-given context. #}
+
+{# We also walk the list of guests to generate `li` nodes using a `{% for %}` loop. #}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Invitation for {{ name }}</title>
+</head>
+
+<body>
+    <h1>Invitation to our wedding</h1>
+    <p>Hello, {{ name }}!</p>
+    <p>We're inviting you to our wedding.</p>
+    <p>Also invited are:</p>
+    <ul>
+        {% for guest in guests %}
+        <li>{{ guest }}</li>
+        {% endfor %}
+    </ul>
+    <p>We're looking forward to seeing you all!</p>
+</body>
+
+</html>

@@ -1,6 +1,6 @@
 # sanity
 
-The only sane static site generator in existence.
+The only sane static site generator in existence. Refer to the [examples directory](examples) for a quickstart.
 
 Here's what it does for you:
 

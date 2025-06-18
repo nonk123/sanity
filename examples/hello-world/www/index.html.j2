@@ -1,0 +1,9 @@
+{# Here we extend the base template and override some of its defined blocks. #}
+
+{% extends "_base.html" %}
+
+{% block title %}Home{% endblock %}
+{% block content %}
+<h1>Hello World!</h1>
+<p>Next page: <a href="/page.html">link</a>.</p>
+{% endblock %}
