@@ -10,7 +10,7 @@ use clap::Parser;
 use color_eyre::eyre::eyre;
 use http_body_util::Full;
 use hyper::{
-    Request, Response, Uri,
+    Request, Response,
     body::{Bytes, Incoming},
     server::conn::http1,
     service::service_fn,
@@ -124,21 +124,10 @@ async fn http_service(
 
 fn _http_service(req: Request<Incoming>) -> Result<Response<Full<Bytes>>> {
     let in_path = req.uri().path()[1..].to_string();
-    let mut out_path = paths::dist()?.join(in_path.to_string());
+    let mut out_path = paths::dist()?.join(in_path);
 
     if !out_path.exists() {
-        let referer: Uri = req
-            .headers()
-            .get("referer")
-            .ok_or(eyre!("No Referer header for HTTP request"))?
-            .to_str()?
-            .parse()?;
-        let in_path = referer.path()[1..].to_string() + "/" + &in_path;
-        out_path = paths::dist()?.join(in_path);
-
-        if !out_path.exists() {
-            return Err(eyre!("File or directory doesn't exist: {:?}", out_path));
-        }
+        return Err(eyre!("File or directory doesn't exist: {:?}", out_path));
     }
 
     if out_path.is_dir() {
