@@ -103,11 +103,15 @@ async fn main() -> Result<()> {
     }
 }
 
+fn waste_cycles() {
+    thread::sleep(Duration::from_millis(100));
+}
+
 async fn http_service(
     req: Request<Incoming>,
 ) -> core::result::Result<Response<Full<Bytes>>, Infallible> {
     while build::in_progress() {
-        thread::yield_now();
+        waste_cycles();
     }
 
     let query = req.uri().path()[1..].to_string();
@@ -194,7 +198,7 @@ fn watcher() -> Result<()> {
     info!("Watching {:?}", paths::www()?);
 
     loop {
-        thread::sleep(Duration::from_millis(100));
+        waste_cycles();
     }
 }
 
