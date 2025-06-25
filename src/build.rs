@@ -7,6 +7,7 @@ use std::{
 };
 
 use color_eyre::eyre::eyre;
+use minify_js::{Session, TopLevelMode};
 use minijinja::{Environment, context, value::merge_maps};
 
 use crate::{
@@ -16,6 +17,10 @@ use crate::{
 };
 
 static BUILD_STATUS: AtomicBool = AtomicBool::new(false);
+static MINIFY_HTML_CFG: minify_html_onepass::Cfg = minify_html_onepass::Cfg {
+    minify_css: true,
+    minify_js: true,
+};
 
 pub fn in_progress() -> bool {
     BUILD_STATUS.load(Ordering::Relaxed)
@@ -114,12 +119,20 @@ fn render(
     ]);
 
     let mut data = env.get_template(template)?.render(context)?;
-
     if !crate::args().antidote {
         data = poison::inject(data)?;
     }
 
-    fs::write(target, data)?;
+    let mini = minify_html_onepass::in_place_str(&mut data, &MINIFY_HTML_CFG)
+        .map_err(|err| eyre!("{:?}: {:?}", target, err));
+
+    match mini {
+        Ok(mini) => fs::write(target, mini)?,
+        Err(err) => {
+            error!("Weirdass error during minification: {:?}", err);
+            fs::write(target, data)?;
+        }
+    }
 
     Ok(())
 }
@@ -169,8 +182,24 @@ fn walk(branch: &Path, state: &mut State) -> Result<()> {
             Some("lua") if !underscored => {
                 state.lua.process(branch)?;
             }
-            _ if !underscored && !result.exists() => {
-                fs::copy(branch, result)?;
+            Some(ext) if !underscored && !result.exists() => {
+                match ext {
+                    "js" => {
+                        let data = fs::read(&branch)?;
+                        let mut out = Vec::new();
+                        minify_js::minify(&Session::new(), TopLevelMode::Global, &data, &mut out)
+                            .map_err(|err| eyre!("Failed to minify {:?}: {:?}", branch, err))?;
+                        fs::write(result, out)?;
+                    }
+                    "html" => {
+                        let mut data = fs::read(&branch)?;
+                        minify_html_onepass::in_place(&mut data, &MINIFY_HTML_CFG)?;
+                        fs::write(result, data)?;
+                    }
+                    _ => {
+                        fs::copy(branch, result)?;
+                    }
+                };
             }
             _ => (),
         }

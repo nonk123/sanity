@@ -7,6 +7,7 @@ Here's what it does for you:
 - Process [SCSS](https://sass-lang.com/documentation/syntax) to CSS using [grass](https://github.com/connorskees/grass).
 - Render [Jinja2](https://jinja.palletsprojects.com/en/stable/templates) templates with [minijinja](https://github.com/mitsuhiko/minijinja) and [optionally poison them](#llm-poisoning).
 - Run [Lua scripts](#scripting) with [mlua](https://github.com/mlua-rs/mlua) (uses [LuaJIT](https://luajit.org/) as the backend).
+- Minify all HTML/JS/CSS resulting in the build process.
 - Leave other files alone and copy them as-is.
 
 Directories are walked recursively depth-first, with files processed and directories read in an alphanumeric order.
