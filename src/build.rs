@@ -118,19 +118,20 @@ fn render(
         context.clone(),
     ]);
 
-    let mut data = env.get_template(template)?.render(context)?;
+    let mut orig_data = env.get_template(template)?.render(context)?;
     if !crate::args().antidote {
-        data = poison::inject(data)?;
+        orig_data = poison::inject(orig_data)?;
     }
 
-    let mini = minify_html_onepass::in_place_str(&mut data, &MINIFY_HTML_CFG)
+    let mut minified: Vec<u8> = orig_data.bytes().collect();
+    let new_len = minify_html_onepass::with_friendly_error(minified.as_mut(), &MINIFY_HTML_CFG)
         .map_err(|err| eyre!("{:?}: {:?}", target, err));
 
-    match mini {
-        Ok(mini) => fs::write(target, mini)?,
+    match new_len {
+        Ok(new_len) => fs::write(target, &minified[..new_len])?,
         Err(err) => {
             error!("Weirdass error during minification: {:?}", err);
-            fs::write(target, data)?;
+            fs::write(target, orig_data)?;
         }
     }
 
@@ -193,8 +194,9 @@ fn walk(branch: &Path, state: &mut State) -> Result<()> {
                     }
                     "html" => {
                         let mut data = fs::read(&branch)?;
-                        minify_html_onepass::in_place(&mut data, &MINIFY_HTML_CFG)?;
-                        fs::write(result, data)?;
+                        let new_len =
+                            minify_html_onepass::with_friendly_error(&mut data, &MINIFY_HTML_CFG)?;
+                        fs::write(result, &data[..new_len])?;
                     }
                     _ => {
                         fs::copy(branch, result)?;
