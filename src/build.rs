@@ -17,10 +17,6 @@ use crate::{
 };
 
 static BUILD_STATUS: AtomicBool = AtomicBool::new(false);
-static MINIFY_HTML_CFG: minify_html_onepass::Cfg = minify_html_onepass::Cfg {
-    minify_css: true,
-    minify_js: true,
-};
 
 pub fn in_progress() -> bool {
     BUILD_STATUS.load(Ordering::Relaxed)
@@ -118,24 +114,64 @@ fn render(
         context.clone(),
     ]);
 
-    let mut orig_data = env.get_template(template)?.render(context)?;
+    let mut data = env.get_template(template)?.render(context)?;
     if !crate::args().antidote {
-        orig_data = poison::inject(orig_data)?;
+        data = poison::inject(data)?;
     }
 
-    let mut minified: Vec<u8> = orig_data.bytes().collect();
-    let new_len = minify_html_onepass::with_friendly_error(minified.as_mut(), &MINIFY_HTML_CFG)
-        .map_err(|err| eyre!("{:?}: {:?}", target, err));
-
-    match new_len {
-        Ok(new_len) => fs::write(target, &minified[..new_len])?,
-        Err(err) => {
-            error!("Weirdass error during minification: {:?}", err);
-            fs::write(target, orig_data)?;
-        }
-    }
+    write_minified(target, Minify::Html(data))?;
 
     Ok(())
+}
+
+enum Minify<T> {
+    Html(T),
+    Js(T),
+}
+
+fn write_minified<T: Into<Vec<u8>>>(path: &Path, data: Minify<T>) -> Result<()> {
+    let mut orig_data;
+
+    let data: Result<_> = match data {
+        Minify::Html(html) => {
+            orig_data = html.into();
+
+            minify_html_onepass::with_friendly_error(
+                orig_data.as_mut(),
+                &minify_html_onepass::Cfg {
+                    minify_css: true,
+                    minify_js: true,
+                },
+            )
+            .map_err(|err| eyre!("{:?}: {:?}", path, err))
+            .map(|x| orig_data[..x].to_vec())
+        }
+        Minify::Js(js) => {
+            orig_data = js.into();
+            let mut data = Vec::new();
+
+            minify_js::minify(
+                &mut Session::new(),
+                TopLevelMode::Global,
+                &orig_data,
+                &mut data,
+            )
+            .map_err(|err| eyre!("{:?}: {:?}", path, err))
+            .map(|_| data)
+        }
+    };
+
+    match data {
+        Ok(data) => {
+            fs::write(path, data)?;
+            Ok(())
+        }
+        Err(err) => {
+            error!("Weirdass error during minification: {:?}", err);
+            fs::write(path, orig_data)?;
+            Err(err)
+        }
+    }
 }
 
 struct State {
@@ -161,50 +197,51 @@ fn walk(branch: &Path, state: &mut State) -> Result<()> {
         for child in ls {
             walk(&child, state)?;
         }
-    } else if !state.processed_items.contains(branch) {
-        state.processed_items.insert(branch.to_path_buf());
 
-        let ext = branch.extension().and_then(OsStr::to_str);
-        let underscored = is_underscored(branch);
+        return Ok(());
+    }
 
-        match ext {
-            Some("j2") => {
-                let name = template_name(branch)?;
-                let source = fs::read_to_string(branch)?;
-                state.templates.insert(name, source);
-            }
-            Some("scss") if !underscored => {
-                let input = fs::read_to_string(branch)?;
-                let opts = grass::Options::default().load_path(paths::www()?);
-                let data = grass::from_string(input, &opts)?;
-                result.set_extension("css");
-                fs::write(result, data)?;
-            }
-            Some("lua") if !underscored => {
-                state.lua.process(branch)?;
-            }
-            Some(ext) if !underscored && !result.exists() => {
-                match ext {
-                    "js" => {
-                        let data = fs::read(&branch)?;
-                        let mut out = Vec::new();
-                        minify_js::minify(&Session::new(), TopLevelMode::Global, &data, &mut out)
-                            .map_err(|err| eyre!("Failed to minify {:?}: {:?}", branch, err))?;
-                        fs::write(result, out)?;
-                    }
-                    "html" => {
-                        let mut data = fs::read(&branch)?;
-                        let new_len =
-                            minify_html_onepass::with_friendly_error(&mut data, &MINIFY_HTML_CFG)?;
-                        fs::write(result, &data[..new_len])?;
-                    }
-                    _ => {
-                        fs::copy(branch, result)?;
-                    }
-                };
-            }
-            _ => (),
+    if state.processed_items.contains(branch) {
+        return Ok(());
+    }
+
+    state.processed_items.insert(branch.to_path_buf());
+
+    let ext = branch.extension().and_then(OsStr::to_str);
+    let underscored = is_underscored(branch);
+
+    match ext {
+        Some("j2") => {
+            let name = template_name(branch)?;
+            let source = fs::read_to_string(branch)?;
+            state.templates.insert(name, source);
         }
+        Some("scss") if !underscored => {
+            let input = fs::read_to_string(branch)?;
+            let opts = grass::Options::default().load_path(paths::www()?);
+            let data = grass::from_string(input, &opts)?;
+            result.set_extension("css");
+            fs::write(result, data)?;
+        }
+        Some("lua") if !underscored => {
+            state.lua.process(branch)?;
+        }
+        Some(ext) if !underscored && !result.exists() => {
+            match ext {
+                "js" => {
+                    let data = fs::read(&branch)?;
+                    write_minified(&result, Minify::Js(data))?;
+                }
+                "html" => {
+                    let data = fs::read(&branch)?;
+                    write_minified(&result, Minify::Html(data))?;
+                }
+                _ => {
+                    fs::copy(branch, result)?;
+                }
+            };
+        }
+        _ => (),
     }
 
     Ok(())
@@ -232,7 +269,8 @@ fn template_name(path: &Path) -> Result<String> {
             name += "/";
         }
 
-        name += &String::from_utf8(x.as_encoded_bytes().iter().cloned().collect())?;
+        let x = x.as_encoded_bytes().iter().cloned().collect();
+        name += &String::from_utf8(x)?;
     }
 
     Ok(name)
