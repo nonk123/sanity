@@ -1,9 +1,10 @@
 use std::{
     collections::HashMap,
-    fs::File,
+    fs::{self, File},
     path::{Path, PathBuf},
 };
 
+use chrono::{DateTime, Utc};
 use minijinja::Value as JValue;
 use mlua::{Lua, LuaSerdeExt, Value};
 
@@ -84,7 +85,7 @@ fn try_new_shebang() -> Result<Shebang> {
 
     let read = lua.create_function(move |lua, path: String| {
         let path = paths::www().unwrap().join(path);
-        match std::fs::read_to_string(&path) {
+        match fs::read_to_string(&path) {
             Ok(s) => {
                 let s = lua.create_string(s).unwrap();
                 Ok(Value::String(s))
@@ -97,6 +98,21 @@ fn try_new_shebang() -> Result<Shebang> {
     })?;
     globals.set("read", read)?;
 
+    let lastmod = lua.create_function(move |lua, path: String| {
+        let path = paths::www().unwrap().join(path);
+        match fs::metadata(&path).and_then(|x| x.modified()) {
+            Ok(modif) => {
+                let s = lua.create_string(fmt_iso(modif)).unwrap();
+                Ok(Value::String(s))
+            }
+            Err(err) => {
+                error!("stat failed {:?}: {:?}", path, err);
+                Ok(Value::Nil)
+            }
+        }
+    })?;
+    globals.set("lastmod", lastmod)?;
+
     let inject = lua.create_function(move |lua, (name, value): (String, Value)| {
         lua.app_data_mut::<State>()
             .unwrap()
@@ -108,4 +124,8 @@ fn try_new_shebang() -> Result<Shebang> {
     globals.set("inject", inject)?;
 
     Ok(Shebang { lua })
+}
+
+fn fmt_iso(datetime: impl Into<DateTime<Utc>>) -> String {
+    datetime.into().format("%+").to_string()
 }

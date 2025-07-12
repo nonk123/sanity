@@ -31,6 +31,7 @@ serde_json = { version = "1", features = ["alloc"] }
 lol_html = { version = "2", optional = true }
 minify-html-onepass = "0.16"
 minify-js = "0.6"
+chrono = "0.4"
 
 [target.'cfg(windows)'.dependencies.mlua]
 version = "0.10"

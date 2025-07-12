@@ -18,3 +18,7 @@ function read(path) end
 ---@param value any
 ---@return nil
 function inject(name, value) end
+
+---@param path string
+---@return string
+function lastmod(path) end
