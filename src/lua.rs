@@ -5,8 +5,9 @@ use std::{
 };
 
 use chrono::{DateTime, Utc};
+use color_eyre::eyre::eyre;
 use minijinja::Value as JValue;
-use mlua::{Lua, LuaSerdeExt, Value};
+use mlua::{IntoLua, Lua, LuaSerdeExt, Value};
 
 use crate::{Result, paths};
 
@@ -49,81 +50,71 @@ fn try_new_shebang() -> Result<Shebang> {
         global_context: HashMap::new(),
     });
 
-    let render = lua.create_function(
+    let render = lua.create_function(luaize(
         move |lua, (template, target, context): (String, String, Value)| {
             trace!("lua render: {:?} {:?} => {:?}", template, target, context);
 
             let mut state = lua.app_data_mut::<State>().unwrap();
             state.render_queue.push(Render {
                 context: JValue::from_serialize(context),
-                target: paths::dist().unwrap().join(target),
+                target: paths::dist()?.join(target),
                 template,
             });
 
-            Ok(())
+            Ok(Value::Nil)
         },
-    )?;
+    ))?;
     globals.set("render", render)?;
 
-    let json = lua.create_function(move |lua, path: String| {
-        fn inner(lua: &Lua, path: &str) -> Result<Value> {
-            let path = paths::www().unwrap().join(path);
-            let file = File::open(path)?;
-            let serde: JValue = serde_json::from_reader(file)?; // INSANE hack
-            Ok(lua.to_value(&serde)?)
-        }
-
-        match inner(lua, &path) {
-            Ok(ok) => Ok(ok),
-            Err(err) => {
-                error!("JSON load failed {:?}: {:?}", path, err);
-                Ok(Value::Nil)
-            }
-        }
-    })?;
+    let json = lua.create_function(luaize(move |lua, path: String| {
+        let path = paths::www()?.join(path);
+        let file = File::open(path)?;
+        let serde: JValue = serde_json::from_reader(file)?; // INSANE hack
+        Ok(lua.to_value(&serde)?)
+    }))?;
     globals.set("json", json)?;
 
-    let read = lua.create_function(move |lua, path: String| {
-        let path = paths::www().unwrap().join(path);
-        match fs::read_to_string(&path) {
-            Ok(s) => {
-                let s = lua.create_string(s).unwrap();
-                Ok(Value::String(s))
-            }
-            Err(err) => {
-                error!("read failed {:?}: {:?}", path, err);
-                Ok(Value::Nil)
-            }
-        }
-    })?;
+    let read = lua.create_function(luaize(move |_, path: String| {
+        let path = paths::www()?.join(path);
+        Ok(fs::read_to_string(&path)?)
+    }))?;
     globals.set("read", read)?;
 
-    let lastmod = lua.create_function(move |lua, path: String| {
-        let path = paths::www().unwrap().join(path);
-        match fs::metadata(&path).and_then(|x| x.modified()) {
-            Ok(modif) => {
-                let s = lua.create_string(fmt_iso(modif)).unwrap();
-                Ok(Value::String(s))
-            }
-            Err(err) => {
-                error!("stat failed {:?}: {:?}", path, err);
-                Ok(Value::Nil)
-            }
-        }
-    })?;
+    let lastmod = lua.create_function(luaize(move |_, path: String| {
+        let path = paths::www()?.join(path);
+        let modif = fs::metadata(&path).and_then(|x| x.modified())?;
+        Ok(fmt_iso(modif))
+    }))?;
     globals.set("lastmod", lastmod)?;
 
-    let inject = lua.create_function(move |lua, (name, value): (String, Value)| {
+    let inject = lua.create_function(luaize(move |lua, (name, value): (String, Value)| {
         lua.app_data_mut::<State>()
             .unwrap()
             .global_context
             .insert(name, JValue::from_serialize(value));
-
         Ok(Value::Nil)
-    })?;
+    }))?;
     globals.set("inject", inject)?;
 
     Ok(Shebang { lua })
+}
+
+fn luaize<Arg, T>(
+    func: impl Fn(&Lua, Arg) -> crate::Result<T> + 'static,
+) -> impl Fn(&Lua, Arg) -> mlua::Result<Value>
+where
+    Arg: 'static,
+    T: IntoLua + 'static,
+{
+    move |lua, arg| match func(lua, arg)
+        .and_then(|x| x.into_lua(lua).map_err(|err| eyre!("{:?}", err)))
+    {
+        Ok(v) => Ok(v),
+        Err(err) => {
+            error!("Lua error: {:?}", err);
+            Ok(Value::Nil)
+        }
+    }
 }
 
 fn fmt_iso(datetime: impl Into<DateTime<Utc>>) -> String {
