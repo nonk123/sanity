@@ -119,7 +119,11 @@ fn render(
         data = poison::inject(data)?;
     }
 
-    write_minified(target, Minify::Html(data))?;
+    if let Some("html") = target.extension().and_then(|x| x.to_str()) {
+        write_minified(target, Minify::Html(data))?;
+    } else {
+        fs::write(target, data)?;
+    }
 
     Ok(())
 }
@@ -129,7 +133,7 @@ enum Minify<T> {
     Js(T),
 }
 
-fn write_minified<T: Into<Vec<u8>>>(path: &Path, data: Minify<T>) -> Result<()> {
+fn write_minified<T: Into<Vec<u8>>>(target: &Path, data: Minify<T>) -> Result<()> {
     let mut orig_data;
 
     let data: Result<_> = match data {
@@ -143,7 +147,7 @@ fn write_minified<T: Into<Vec<u8>>>(path: &Path, data: Minify<T>) -> Result<()> 
                     minify_js: true,
                 },
             )
-            .map_err(|err| eyre!("{:?}: {:?}", path, err))
+            .map_err(|err| eyre!("{:?}: {:?}", target, err))
             .map(|x| orig_data[..x].to_vec())
         }
         Minify::Js(js) => {
@@ -156,19 +160,19 @@ fn write_minified<T: Into<Vec<u8>>>(path: &Path, data: Minify<T>) -> Result<()> 
                 &orig_data,
                 &mut data,
             )
-            .map_err(|err| eyre!("{:?}: {:?}", path, err))
+            .map_err(|err| eyre!("{:?}: {:?}", target, err))
             .map(|_| data)
         }
     };
 
     match data {
         Ok(data) => {
-            fs::write(path, data)?;
+            fs::write(target, data)?;
             Ok(())
         }
         Err(err) => {
             error!("Weirdass error during minification: {:?}", err);
-            fs::write(path, orig_data)?;
+            fs::write(target, orig_data)?;
             Err(err)
         }
     }
