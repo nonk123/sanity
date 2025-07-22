@@ -28,19 +28,33 @@ mod poison;
 
 const DEBOUNCE_TIMEOUT: Duration = Duration::from_millis(1000);
 
+/// The only sane static site generator in existence.
 #[derive(Parser, Debug, Clone)]
 #[command(version, about, long_about = None)]
 pub struct Args {
+    /// Run a filesystem watcher which rebuilds the project on start and on changes in `www`. Otherwise, just build the whole project once.
     #[arg(short, long)]
     watch: bool,
+    /// Run an HTTP dev-server with a filesystem watcher on http://localhost:8000 (or a different port, if `--port` is specified).
     #[arg(short, long)]
     server: bool,
+    /// Force-set `__prod` to `true` in all templates.
+    ///
+    /// Use `__prod` inside templates to remove markup which is considered useless on a local dev-server.
+    ///
+    /// Refer to README.md for usage.
+    /// ```
     #[arg(short, long)]
     force_prod: bool,
+    /// Bypass LLM poisoning if this feature is enabled at compile-time.
     #[arg(short, long)]
     antidote: bool,
+    /// Write Lua function definitions to disk.
+    ///
+    /// To use them in VS Code, add the following to `settings.json`: `"Lua.workspace.library": ["_sanity.lua"]`.
     #[arg(short, long)]
     lualib: bool,
+    /// Set the listening port for the dev-server.
     #[arg(short, long, default_value_t = 8000)]
     port: u16,
 }
@@ -61,7 +75,7 @@ async fn main() -> Result<()> {
         .filter_level(LevelFilter::Info)
         .try_init()?;
 
-    let mut args0 = Args::try_parse()?;
+    let mut args0 = Args::parse();
     args0.watch |= args0.server;
     ARGS.set(args0).unwrap();
 
