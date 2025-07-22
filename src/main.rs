@@ -41,6 +41,8 @@ pub struct Args {
     antidote: bool,
     #[arg(short, long)]
     lualib: bool,
+    #[arg(short, long, default_value_t = 8000)]
+    port: u16,
 }
 
 impl Args {
@@ -78,9 +80,9 @@ async fn main() -> Result<()> {
 
     thread::spawn(watcher);
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8000));
+    let addr = SocketAddr::from(([127, 0, 0, 1], args().port));
     let listener = TcpListener::bind(addr).await?;
-    info!("Hosting dev-server on http://{}", addr);
+    info!("Hosting dev-server on http://localhost:{}", args().port);
 
     loop {
         let (stream, addr) = listener.accept().await?;
