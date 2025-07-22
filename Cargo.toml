@@ -20,7 +20,7 @@ notify = "8"
 tokio = { version = "1", features = ["full"] }
 pretty_env_logger = "0.5"
 log = { version = "0.4", features = ["std"] }
-mlua = { version = "0.10", features = [
+mlua = { version = "0.11", features = [
     "luajit",
     "serialize",
     "send",
@@ -34,5 +34,5 @@ minify-js = "0.6"
 chrono = "0.4"
 
 [target.'cfg(windows)'.dependencies.mlua]
-version = "0.10"
+version = "0.11"
 features = ["vendored"]
