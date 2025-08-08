@@ -12,10 +12,10 @@ clap = { version = "4.5", features = ["derive"] }
 color-eyre = "0.6"
 grass = "0.13"
 http-body-util = "0.1"
-hyper = { version = "1", features = ["http1", "http2", "server"] }
+hyper = { version = "1", features = ["http1", "server"] }
 hyper-util = { version = "0.1", features = ["full"] }
 minijinja = { version = "2.9", features = ["loader", "multi_template"] }
-notify-debouncer-full = "0.5"
+notify-debouncer-full = "0.6"
 notify = "8"
 tokio = { version = "1", features = ["full"] }
 pretty_env_logger = "0.5"
@@ -25,6 +25,7 @@ mlua = { version = "0.11", features = [
     "serialize",
     "send",
     "error-send",
+    "vendored",
 ] }
 serde = { version = "1", features = ["alloc"] }
 serde_json = { version = "1", features = ["alloc"] }
@@ -32,7 +33,3 @@ lol_html = { version = "2", optional = true }
 minify-html-onepass = "0.16"
 minify-js = "0.6"
 chrono = "0.4"
-
-[target.'cfg(windows)'.dependencies.mlua]
-version = "0.11"
-features = ["vendored"]
