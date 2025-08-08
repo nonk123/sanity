@@ -7,7 +7,7 @@ use std::{
 use chrono::{DateTime, Utc};
 use color_eyre::eyre::eyre;
 use minijinja::Value as JValue;
-use mlua::{IntoLua, Lua, LuaSerdeExt, Value};
+use mlua::{FromLuaMulti, IntoLua, Lua, LuaSerdeExt, Value};
 
 use crate::{Result, paths};
 
@@ -43,14 +43,14 @@ pub struct State {
 
 fn try_new_shebang() -> Result<Shebang> {
     let lua = Lua::new();
-    let globals = lua.globals();
 
     lua.set_app_data(State {
         render_queue: Vec::new(),
         global_context: HashMap::new(),
     });
 
-    let render = lua.create_function(luaize(
+    lua.register(
+        "render",
         move |lua, (template, target, context): (String, String, Value)| {
             trace!("lua render: {:?} {:?} => {:?}", template, target, context);
 
@@ -63,57 +63,69 @@ fn try_new_shebang() -> Result<Shebang> {
 
             Ok(Value::Nil)
         },
-    ))?;
-    globals.set("render", render)?;
+    )?;
 
-    let json = lua.create_function(luaize(move |lua, path: String| {
+    lua.register("json", move |lua, path: String| {
         let path = paths::www()?.join(path);
         let file = File::open(path)?;
         let serde: JValue = serde_json::from_reader(file)?; // INSANE hack
         Ok(lua.to_value(&serde)?)
-    }))?;
-    globals.set("json", json)?;
+    })?;
 
-    let read = lua.create_function(luaize(move |_, path: String| {
+    lua.register("read", move |_, path: String| {
         let path = paths::www()?.join(path);
         Ok(fs::read_to_string(&path)?)
-    }))?;
-    globals.set("read", read)?;
+    })?;
 
-    let lastmod = lua.create_function(luaize(move |_, path: String| {
+    lua.register("lastmod", move |_, path: String| {
         let path = paths::www()?.join(path);
         let modif = fs::metadata(&path).and_then(|x| x.modified())?;
         Ok(fmt_iso(modif))
-    }))?;
-    globals.set("lastmod", lastmod)?;
+    })?;
 
-    let inject = lua.create_function(luaize(move |lua, (name, value): (String, Value)| {
+    lua.register("inject", move |lua, (name, value): (String, Value)| {
         lua.app_data_mut::<State>()
             .unwrap()
             .global_context
             .insert(name, JValue::from_serialize(value));
         Ok(Value::Nil)
-    }))?;
-    globals.set("inject", inject)?;
+    })?;
 
     Ok(Shebang { lua })
 }
 
-fn luaize<Arg, T>(
-    func: impl Fn(&Lua, Arg) -> crate::Result<T> + 'static,
-) -> impl Fn(&Lua, Arg) -> mlua::Result<Value>
-where
-    Arg: 'static,
-    T: IntoLua + 'static,
-{
-    move |lua, arg| match func(lua, arg)
-        .and_then(|x| x.into_lua(lua).map_err(|err| eyre!("{:?}", err)))
+trait LuaRegisterExt {
+    fn register<Arg, T>(
+        &self,
+        name: &str,
+        func: impl Fn(&Lua, Arg) -> crate::Result<T> + Send + 'static,
+    ) -> Result<()>
+    where
+        Arg: FromLuaMulti + 'static,
+        T: IntoLua + 'static;
+}
+
+impl LuaRegisterExt for Lua {
+    fn register<Arg, T>(
+        &self,
+        name: &str,
+        func: impl Fn(&Lua, Arg) -> crate::Result<T> + Send + 'static,
+    ) -> Result<()>
+    where
+        Arg: FromLuaMulti + 'static,
+        T: IntoLua + 'static,
     {
-        Ok(v) => Ok(v),
-        Err(err) => {
-            error!("Lua error: {:?}", err);
-            Ok(Value::Nil)
-        }
+        let cls = move |lua: &Lua, arg: Arg| match func(lua, arg)
+            .and_then(|x| x.into_lua(lua).map_err(|err| eyre!("{:?}", err)))
+        {
+            Ok(v) => Ok(v),
+            Err(err) => {
+                error!("Lua error: {:?}", err);
+                Ok(Value::Nil)
+            }
+        };
+        self.globals().set(name, self.create_function(cls)?)?;
+        Ok(())
     }
 }
 
