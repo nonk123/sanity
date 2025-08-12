@@ -60,7 +60,8 @@ end
 
 `render` takes a template (relative to `www`) to add to the _render queue_, its output path (relative to `dist`), and a context to supply to it. Fields `id`, `date`, and `contents` from the example above can be referenced within the template using the mustache syntax: `{{ id }}`, `{{ date }}`, `{{ contents }}`.
 
-Note the italics: the `render` function doesn't render immediately. Templates are rendered after all else, ensuring you can reference any template from another through inclusion or extension.
+> [!NOTE]
+> The `render` function doesn't render immediately; it _queues_ rendering.
 
 You can also read JSON files inside `www` by using the `json` function:
 
