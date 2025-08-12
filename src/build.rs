@@ -221,9 +221,8 @@ fn walk(branch: &Path, state: &mut State) -> Result<()> {
             state.templates.insert(name, source);
         }
         Some("scss") if !underscored => {
-            let input = fs::read_to_string(branch)?;
             let opts = grass::Options::default().load_path(paths::www()?);
-            let data = grass::from_string(input, &opts)?;
+            let data = grass::from_path(branch, &opts)?;
             result.set_extension("css");
             fs::write(result, data)?;
         }
