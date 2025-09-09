@@ -2,29 +2,30 @@ name: Build and release for major platforms
 
 on:
   push:
-    tags: ["gh-actions"]
+    tags: [gh-actions]
 
 jobs:
   build:
-    name: Upload distribution for ${{ matrix.config.fancy-name }}
-    runs-on: ${{ matrix.config.os }}
+    name: Upload distribution for ${{ matrix.cfg.fancy-name }}
+    runs-on: ${{ matrix.cfg.os }}
+    permissions:
+      contents: write
     strategy:
-      fail-fast: false
       matrix:
-        config:
+        cfg:
           - name: release-linux
             fancy-name: Linux
-            os: ubuntu-latest
+            os: ubuntu-24.04
             bin-ext: ""
           - name: release-windows
             fancy-name: Windows
-            os: windows-latest
+            os: windows-2022
             bin-ext: .exe
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Restore dependencies cache
-        uses: actions/cache/restore@v4
+      - name: Cache dependencies
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -32,21 +33,10 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Build
-        run: |
-          cargo fetch --locked
-          cargo build --features mlua/vendored --release
-      - name: Save dependencies cache
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        run: cargo fetch --locked && cargo build --release
       - name: Rename binary artifact
-        run: |
-          cp target/release/sanity${{ matrix.config.bin-ext }} sanity-${{ matrix.config.name }}${{ matrix.config.bin-ext }}
+        run: cp target/release/sanity${{ matrix.cfg.bin-ext }} sanity-${{ matrix.cfg.name }}${{ matrix.cfg.bin-ext }}
       - name: Release binary
         uses: softprops/action-gh-release@v2
         with:
-          files: sanity-${{ matrix.config.name }}${{ matrix.config.bin-ext }}
+          files: sanity-${{ matrix.cfg.name }}${{ matrix.cfg.bin-ext }}
