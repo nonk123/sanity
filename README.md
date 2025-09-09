@@ -9,15 +9,20 @@ Here's what it does for you:
 
 - Process [SCSS](https://sass-lang.com/documentation/syntax) to CSS using [grass](https://github.com/connorskees/grass).
 - Render [Jinja2](https://jinja.palletsprojects.com/en/stable/templates) templates with [minijinja](https://github.com/mitsuhiko/minijinja) and [optionally poison them](#llm-poisoning).
-- Run [Lua scripts](#scripting) with [mlua](https://github.com/mlua-rs/mlua) (uses [LuaJIT](https://luajit.org/) as the backend).
-- Minify all HTML/JS/CSS resulting in the build process.
+- Run [Lua scripts](#scripting) with [mlua](https://github.com/mlua-rs/mlua), using [LuaJIT](https://luajit.org/) for the backend. Useful for rendering a template with different sets of inputs.
+- Minify HTML/JS/CSS resulting in the build process.
 - Leave other files alone and copy them as-is.
 
 Directories are walked recursively depth-first, with files processed and directories read in an alphanumeric order.
 
-Files prefixed with `_` are excluded from SCSS/Jinja2/Lua processing and aren't copied. This is useful for a "base" HTML template you don't want a copy of rendered, or if you render the template programmatically.
+Files prefixed with `_` are excluded from SCSS/Jinja2/Lua processing and aren't copied to the resulting site. This is useful for:
 
-Sites powered by `sanity`:
+- "Base" templates that aren't meant to be rendered on their own.
+- Templates that are only rendered programmatically.
+- SCSS `@use` modules.
+- Lua `require()` imports.
+
+Here are some of the sites powered by `sanity`:
 
 - [nonk.dev](https://nonk.dev) ([repo](https://github.com/nonk123/nonk.dev))
 - [schwung.us](https://schwung.us) ([repo](https://github.com/Schwungus/schwung.us))
@@ -27,14 +32,12 @@ Sites powered by `sanity`:
 
 Put your files inside the `www` folder in your project directory. Run the provided binary. You should get a fully processed site inside the `dist` folder.
 
-Run with `--watch` to auto-rebuild your site on file changes. Run with `--server` to run a development server (implies `--watch`).
+Run with `--watch` to auto-rebuild your site on edits inside `www`. Run with `--server` to also start a built-in development server.
 
-Use the `--lualib` flag to put a LuaLS definitions file in your project folder. This should hide the 999 warnings about undefined functions you've been getting. Make sure to point your IDE to this file, for example VSCode in your `settings.json`:
+Use the `--lualib` flag to put a LuaLS definitions file in your project folder. This should hide the 999 warnings about undefined functions you've been getting. Make sure to point your IDE to this file, e.g. in VSCode `settings.json`:
 
 ```json
-{
-    "Lua.workspace.library": ["_sanity.lua"]
-}
+{ "Lua.workspace.library": ["_sanity.lua"] }
 ```
 
 ## Scripting
@@ -58,10 +61,10 @@ for id, post in pairs(blog) do
 end
 ```
 
-`render` takes a template (relative to `www`) to add to the _render queue_, its output path (relative to `dist`), and a context to supply to it. Fields `id`, `date`, and `contents` from the example above can be referenced within the template using the mustache syntax: `{{ id }}`, `{{ date }}`, `{{ contents }}`.
+`render` takes a template name (path relative to `www`, without the `.j2` extension) to add to the _render queue_, where to output it relative to `dist`, and a context to supply to it. Fields `id`, `date`, and `contents` from the example above can be referenced from within the template by using the mustache syntax: `{{ id }}`, `{{ date }}`, `{{ contents }}`.
 
 > [!NOTE]
-> The `render` function doesn't render immediately; it _queues_ rendering.
+> I repeat: the `render` function doesn't render immediately; it _queues_ rendering.
 
 You can also read JSON files inside `www` by using the `json` function:
 
@@ -74,7 +77,7 @@ local blog = json("blog/db.json");
 
 ```lua
 local id = "nice-day";
-local contents = read("blog/" .. id .. ".txt");
+local contents = read("blog/" .. id .. ".md");
 -- simile
 ```
 
