@@ -2,8 +2,8 @@
 extern crate log;
 
 use std::{
-    collections::HashSet, convert::Infallible, fs, net::SocketAddr, sync::OnceLock, thread,
-    time::Duration,
+    collections::HashSet, convert::Infallible, ffi::OsStr, fs, net::SocketAddr, sync::OnceLock,
+    thread, time::Duration,
 };
 
 use clap::Parser;
@@ -12,6 +12,7 @@ use http_body_util::Full;
 use hyper::{
     Request, Response,
     body::{Bytes, Incoming},
+    header::CONTENT_TYPE,
     server::conn::http1,
     service::service_fn,
 };
@@ -158,8 +159,18 @@ fn _http_service(req: Request<Incoming>) -> Result<Response<Full<Bytes>>> {
         return Err(eyre!("File doesn't exist: {:?}", out_path));
     }
 
-    let data = fs::read(out_path)?;
-    Ok(Response::new(Full::new(Bytes::from(data))))
+    let data = fs::read(out_path.clone())?;
+    let mut res = Response::new(Full::new(Bytes::from(data)));
+    if let Some(x) = match out_path.extension().and_then(OsStr::to_str) {
+        Some("html") => Some("text/html"),
+        Some("css") => Some("text/css"),
+        Some("js") => Some("text/javascript"),
+        _ => None,
+    } {
+        res.headers_mut().insert(CONTENT_TYPE, x.parse()?);
+    }
+
+    Ok(res)
 }
 
 fn process_events(events: Vec<DebouncedEvent>) -> Result<()> {
