@@ -13,7 +13,7 @@ color-eyre = "0.6.x"
 grass = "0.13.x"
 http-body-util = "0.1.x"
 hyper = { version = "1.x.x", features = ["http1", "server"] }
-hyper-util = { version = "0.1.x", features = ["full"] }
+hyper-util = { version = "0.1.17", features = ["full"] }
 minijinja = { version = "2.12.x", features = ["loader", "multi_template"] }
 notify-debouncer-full = "0.6.x"
 notify = "8.x.x"
