@@ -27,7 +27,7 @@ mlua = { version = "0.11.x", features = [
     "error-send",
     "vendored",
 ] }
-serde = { version = "1.0.225", features = ["alloc"] }
+serde = { version = "1.0.226", features = ["alloc"] }
 serde_json = { version = "1.0", features = ["alloc"] }
 lol_html = { version = "2.x.x", optional = true }
 minify-html-onepass = "0.16.x"
