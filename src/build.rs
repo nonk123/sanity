@@ -4,6 +4,7 @@ use std::{
     fs,
     path::{Component, Path, PathBuf},
     sync::atomic::{AtomicBool, Ordering},
+    time::Instant,
 };
 
 use color_eyre::eyre::eyre;
@@ -23,9 +24,17 @@ pub fn in_progress() -> bool {
 }
 
 pub fn run() -> Result<()> {
+    let start = Instant::now();
+
     BUILD_STATUS.store(true, Ordering::Relaxed);
     let result = run_inner();
     BUILD_STATUS.store(false, Ordering::Relaxed);
+
+    if crate::args().profile_build_times {
+        let end = Instant::now();
+        info!("Build took {}ms", end.duration_since(start).as_millis());
+    }
+
     result
 }
 

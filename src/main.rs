@@ -50,6 +50,9 @@ pub struct Args {
     /// Bypass LLM poisoning if this feature is enabled at compile-time.
     #[arg(short, long)]
     antidote: bool,
+    /// Output build times in milliseconds. Useful for profiling.
+    #[arg(short, long)]
+    profile_build_times: bool,
 }
 
 #[derive(Subcommand, Debug, Clone)]
