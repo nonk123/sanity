@@ -144,7 +144,7 @@ enum MinifyType {
 fn minify_html(target: &Path, mut data: Vec<u8>) -> Result<Vec<u8>> {
     let conf = minify_html_onepass::Cfg {
         minify_css: true,
-        minify_js: true,
+        minify_js: false, // FIXME: #9
     };
     minify_html_onepass::with_friendly_error(data.as_mut(), &conf)
         .map_err(|err| eyre!("{:?}: {:?}", target, err))
@@ -152,10 +152,15 @@ fn minify_html(target: &Path, mut data: Vec<u8>) -> Result<Vec<u8>> {
 }
 
 fn minify_js(target: &Path, data: Vec<u8>) -> Result<Vec<u8>> {
-    let mut buf = Vec::new();
-    minify_js::minify(&mut Session::new(), TopLevelMode::Global, &data, &mut buf)
-        .map_err(|err| eyre!("{:?}: {:?}", target, err))
-        .map(|_| buf)
+    // FIXME: #9.
+    if false {
+        let mut buf = Vec::new();
+        minify_js::minify(&mut Session::new(), TopLevelMode::Global, &data, &mut buf)
+            .map_err(|err| eyre!("{:?}: {:?}", target, err))
+            .map(|_| buf)
+    } else {
+        Ok(data)
+    }
 }
 
 fn write_minified<T: Into<Vec<u8>>>(target: &Path, file_type: MinifyType, data: T) -> Result<()> {
