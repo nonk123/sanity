@@ -80,7 +80,6 @@ fn run_inner() -> Result<()> {
 
     for name in names {
         let target = paths::dist()?.join(&name);
-
         if !is_underscored(&target) {
             render(&jinja_env, &name, &target, &merge(&context! {}))?;
         }
@@ -119,8 +118,8 @@ fn render(
         data = poison::inject(data)?;
     }
 
-    if let Some("html") = target.extension().and_then(|x| x.to_str()) {
-        write_minified(target, Minify::Html(data))?;
+    if let Some("html") = target.extension().and_then(OsStr::to_str) {
+        write_minified(target, MinifyType::Html, data)?;
     } else {
         fs::write(target, data)?;
     }
@@ -128,50 +127,46 @@ fn render(
     Ok(())
 }
 
-enum Minify<T> {
-    Html(T),
-    Js(T),
+enum MinifyType {
+    Html,
+    Js,
 }
 
-fn write_minified<T: Into<Vec<u8>>>(target: &Path, data: Minify<T>) -> Result<()> {
-    let mut orig_data;
+fn minify_html(target: &Path, mut data: Vec<u8>) -> Result<Vec<u8>> {
+    let conf = minify_html_onepass::Cfg {
+        minify_css: true,
+        minify_js: true,
+    };
+    minify_html_onepass::with_friendly_error(data.as_mut(), &conf)
+        .map_err(|err| eyre!("{:?}: {:?}", target, err))
+        .map(|x| data[..x].to_vec())
+}
 
-    let data: Result<_> = match data {
-        Minify::Html(html) => {
-            orig_data = html.into();
+fn minify_js(target: &Path, data: Vec<u8>) -> Result<Vec<u8>> {
+    let mut buf = Vec::new();
+    minify_js::minify(&mut Session::new(), TopLevelMode::Global, &data, &mut buf)
+        .map_err(|err| eyre!("{:?}: {:?}", target, err))
+        .map(|_| buf)
+}
 
-            minify_html_onepass::with_friendly_error(
-                orig_data.as_mut(),
-                &minify_html_onepass::Cfg {
-                    minify_css: true,
-                    minify_js: true,
-                },
-            )
-            .map_err(|err| eyre!("{:?}: {:?}", target, err))
-            .map(|x| orig_data[..x].to_vec())
-        }
-        Minify::Js(js) => {
-            orig_data = js.into();
-            let mut data = Vec::new();
+fn write_minified<T: Into<Vec<u8>>>(target: &Path, file_type: MinifyType, data: T) -> Result<()> {
+    let orig_data = data.into();
+    let data = orig_data.clone();
+    let prod = crate::args().prod();
 
-            minify_js::minify(
-                &mut Session::new(),
-                TopLevelMode::Global,
-                &orig_data,
-                &mut data,
-            )
-            .map_err(|err| eyre!("{:?}: {:?}", target, err))
-            .map(|_| data)
-        }
+    let minified = match file_type {
+        MinifyType::Html if prod => minify_html(target, data),
+        MinifyType::Js if prod => minify_js(target, data),
+        _ => Ok(data.into()),
     };
 
-    match data {
+    match minified {
         Ok(data) => {
             fs::write(target, data)?;
             Ok(())
         }
         Err(err) => {
-            error!("Weirdass error during minification: {:?}", err);
+            error!("Encountered error during minification: {:?}", err);
             fs::write(target, orig_data)?;
             Err(err)
         }
@@ -185,34 +180,26 @@ struct State {
     lua: LuaShebang,
 }
 
-fn walk(branch: &Path, state: &mut State) -> Result<()> {
-    let mut result = paths::dist()?.join(branch.strip_prefix(paths::www()?)?);
-
-    if branch.is_dir() {
-        let _ = fs::create_dir_all(result);
-
-        let mut ls = Vec::with_capacity(64); // doesn't matter but im GREEDY
-        for child in fs::read_dir(branch)? {
-            ls.push(child?.path().canonicalize()?);
-        }
-
-        ls.sort_by(|a, b| a.as_os_str().cmp(b.as_os_str()));
-
-        for child in ls {
-            walk(&child, state)?;
-        }
-
-        return Ok(());
+fn walk_dir(branch: &Path, state: &mut State) -> Result<()> {
+    let mut ls = Vec::with_capacity(64); // doesn't matter but im GREEDY
+    for child in fs::read_dir(branch)? {
+        ls.push(child?.path().canonicalize()?);
     }
 
-    if state.processed_items.contains(branch) {
-        return Ok(());
+    ls.sort_by(|a, b| a.as_os_str().cmp(b.as_os_str()));
+
+    for child in ls {
+        walk(&child, state)?;
     }
 
-    state.processed_items.insert(branch.to_path_buf());
+    return Ok(());
+}
 
+fn process_file(branch: &Path, mut dest: PathBuf, state: &mut State) -> Result<()> {
     let ext = branch.extension().and_then(OsStr::to_str);
     let underscored = is_underscored(branch);
+    let recent =
+        dest.exists() && fs::metadata(&dest)?.modified()? >= fs::metadata(&branch)?.modified()?;
 
     match ext {
         Some("j2") => {
@@ -223,31 +210,39 @@ fn walk(branch: &Path, state: &mut State) -> Result<()> {
         Some("scss") if !underscored => {
             let opts = grass::Options::default().load_path(paths::www()?);
             let data = grass::from_path(branch, &opts)?;
-            result.set_extension("css");
-            fs::write(result, data)?;
+            dest.set_extension("css");
+            fs::write(dest, data)?;
         }
         Some("lua") if !underscored => {
             state.lua.process(branch)?;
         }
-        Some(ext) if !underscored && !result.exists() => {
-            match ext {
-                "js" => {
-                    let data = fs::read(&branch)?;
-                    write_minified(&result, Minify::Js(data))?;
-                }
-                "html" => {
-                    let data = fs::read(&branch)?;
-                    write_minified(&result, Minify::Html(data))?;
-                }
-                _ => {
-                    fs::copy(branch, result)?;
-                }
-            };
+        Some("js") if !underscored && !recent => {
+            let data = fs::read(&branch)?;
+            write_minified(&dest, MinifyType::Js, data)?;
         }
-        _ => (),
+        Some("html") if !underscored && !recent => {
+            let data = fs::read(&branch)?;
+            write_minified(&dest, MinifyType::Html, data)?;
+        }
+        _ => {
+            fs::copy(branch, dest)?;
+        }
     }
 
     Ok(())
+}
+
+fn walk(branch: &Path, state: &mut State) -> Result<()> {
+    let dest = paths::dist()?.join(branch.strip_prefix(paths::www()?)?);
+    if branch.is_dir() {
+        let _ = fs::create_dir_all(dest);
+        return walk_dir(branch, state);
+    } else if state.processed_items.contains(branch) {
+        return Ok(());
+    } else {
+        state.processed_items.insert(branch.to_path_buf());
+        return process_file(branch, dest, state);
+    }
 }
 
 fn is_underscored(path: &Path) -> bool {
@@ -267,11 +262,9 @@ fn template_name(path: &Path) -> Result<String> {
         let Component::Normal(x) = comp else {
             continue;
         };
-
         if !name.is_empty() {
             name += "/";
         }
-
         let x = x.as_encoded_bytes().iter().cloned().collect();
         name += &String::from_utf8(x)?;
     }
