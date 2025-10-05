@@ -29,7 +29,7 @@ pub fn run() -> Result<()> {
     result
 }
 
-pub fn cleanup() -> Result<()> {
+pub fn nuke() -> Result<()> {
     if !paths::dist()?.exists() {
         return Ok(());
     }

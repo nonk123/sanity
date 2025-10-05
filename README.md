@@ -30,15 +30,9 @@ Here are some of the sites powered by `sanity`:
 
 ## Usage
 
-Put your files inside the `www` folder in your project directory. Run the provided binary. You should get a fully processed site inside the `dist` folder.
+Put your files inside the `www` folder in your project directory. Run the provided binary. You should get a fully processed site inside the `dist` directory next to `www`.
 
-Run with `--watch` to auto-rebuild your site on edits inside `www`. Run with `--server` to also start a built-in development server.
-
-Use the `--lualib` flag to put a LuaLS definitions file in your project folder. This should hide the 999 warnings about undefined functions you've been getting. Make sure to point your IDE to this file, e.g. in VSCode `settings.json`:
-
-```json
-{ "Lua.workspace.library": ["_sanity.lua"] }
-```
+Run with `server` to serve your site using the built-in development server. It rebuilds the site whenever the contents of `www` change. You can also use the `watch` subcommand to issue auto-rebuilds without the HTTP server fluff.
 
 ## Scripting
 
@@ -89,12 +83,24 @@ inject("last_updated", os.date("%Y-%m-%d"));
 
 ## Misc. usage
 
-You can check for the `__prod` boolean in your templates to exclude e.g. analytics from dev builds:
+### Exclude Analytics from Dev Builds
+
+You can check for the `__prod` boolean in your templates to exclude analytics & trackers from dev builds:
 
 ```html
 {% if __prod %}
-<script src="/analytics.js"></script>
+<script src="https://example.org/tracker.js"></script>
 {% endif }
+```
+
+### LuaLS Definitions
+
+Use the `lualib` subcommand to add a LuaLS definitions file to your project folder. This should hide the 999 warnings about undefined functions you've been getting. Make sure to point your IDE to this file, e.g. in VSCode `settings.json`:
+
+```json
+{
+    "Lua.workspace.library": ["_sanity.lua"]
+}
 ```
 
 ## LLM poisoning

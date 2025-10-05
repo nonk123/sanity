@@ -6,7 +6,7 @@ use std::{
     thread, time::Duration,
 };
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use color_eyre::eyre::eyre;
 use http_body_util::Full;
 use hyper::{
@@ -32,38 +32,50 @@ const DEBOUNCE_TIMEOUT: Duration = Duration::from_millis(1000);
 /// The only sane static site generator in existence.
 #[derive(Parser, Debug, Clone)]
 #[command(version, about, long_about = None)]
+#[command(propagate_version = true)]
 pub struct Args {
-    /// Run a filesystem watcher which rebuilds the project on start and on changes in `www`. Otherwise, just build the whole project once.
-    #[arg(short, long)]
-    watch: bool,
-    /// Run an HTTP dev-server with a filesystem watcher on http://localhost:8000 (or a different port, if `--port` is specified).
-    #[arg(short, long)]
-    server: bool,
+    #[command(subcommand)]
+    command: Option<Commands>,
     /// Force-set `__prod` to `true` in all templates.
     ///
-    /// Use `__prod` inside templates to remove markup which is considered useless on a local dev-server.
+    /// `__prod` can be used inside templates to conditionally exclude production markup from local builds such as trackers & analytics:
     ///
-    /// Refer to README.md for usage.
+    /// ```html
+    /// {% if __prod %}
+    /// <script src="https://example.org/tracker.js"></script>
+    /// {% endif }
     /// ```
     #[arg(short, long)]
     force_prod: bool,
     /// Bypass LLM poisoning if this feature is enabled at compile-time.
     #[arg(short, long)]
     antidote: bool,
-    /// Write Lua function definitions to disk.
-    ///
-    /// To use them in VS Code, add the following to `settings.json`: `"Lua.workspace.library": ["_sanity.lua"]`.
-    #[arg(short, long)]
-    lualib: bool,
-    /// Set the listening port for the dev-server.
-    #[arg(short, long, default_value_t = 8000)]
-    port: u16,
 }
 
-impl Args {
-    pub fn prod(&self) -> bool {
-        self.force_prod || (!self.server && !self.watch)
-    }
+#[derive(Subcommand, Debug, Clone)]
+pub enum Commands {
+    /// Build the site in production mode.
+    Build,
+    /// Nuke the contents of the `dist` directory.
+    Clean,
+    /// Run a filesystem watcher which rebuilds the project on start and on changes inside `www`.
+    Watch,
+    /// Run an HTTP dev-server with a filesystem watcher on http://localhost:8000 (or a different port, if `--port` is specified).
+    Server {
+        /// Set the listening port for the dev-server.
+        #[arg(short, long, default_value_t = 8000)]
+        port: u16,
+    },
+    /// Write Lua function definitions to disk.
+    ///
+    /// To use them in VS Code, add the following to your `settings.json`:
+    ///
+    /// ```json
+    /// {
+    ///     "Lua.workspace.library": ["_sanity.lua"]
+    /// }
+    /// ```
+    LuaLib,
 }
 
 pub type Result<T> = color_eyre::eyre::Result<T>;
@@ -76,28 +88,33 @@ async fn main() -> Result<()> {
         .filter_level(LevelFilter::Info)
         .try_init()?;
 
-    let mut args0 = Args::parse();
-    args0.watch |= args0.server;
-    ARGS.set(args0).unwrap();
-
-    if args().lualib {
-        fs::write(paths::root()?.join("_sanity.lua"), include_str!("lib.lua"))?;
-    }
-
-    build::cleanup()?;
-    if !args().server {
-        if args().watch {
-            return watcher();
-        } else {
-            return build::run();
+    ARGS.set(Args::parse()).unwrap();
+    match args().command() {
+        Commands::Build => {
+            build::run()?;
         }
-    }
+        Commands::Clean => {
+            build::nuke()?;
+        }
+        Commands::LuaLib => {
+            fs::write(paths::root()?.join("_sanity.lua"), include_str!("lib.lua"))?;
+        }
+        Commands::Watch => {
+            watcher()?;
+        }
+        Commands::Server { port } => {
+            run_server(port).await?;
+        }
+    };
+    return Ok(());
+}
 
+async fn run_server(port: u16) -> Result<()> {
     thread::spawn(watcher);
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], args().port));
+    let addr = SocketAddr::from(([127, 0, 0, 1], port));
     let listener = TcpListener::bind(addr).await?;
-    info!("Hosting dev-server on http://localhost:{}", args().port);
+    info!("Hosting dev-server on http://localhost:{}", port);
 
     loop {
         let (stream, addr) = listener.accept().await?;
@@ -108,7 +125,6 @@ async fn main() -> Result<()> {
         }
 
         let io = TokioIo::new(stream);
-
         tokio::spawn(async move {
             if let Err(err) = http1::Builder::new()
                 .serve_connection(io, service_fn(http_service))
@@ -240,4 +256,14 @@ static ARGS: OnceLock<Args> = OnceLock::new();
 
 pub fn args() -> &'static Args {
     ARGS.get().unwrap()
+}
+
+impl Args {
+    pub fn command(&self) -> Commands {
+        self.command.clone().unwrap_or(Commands::Build)
+    }
+
+    pub fn prod(&self) -> bool {
+        self.force_prod || matches!(self.command(), Commands::Build)
+    }
 }
