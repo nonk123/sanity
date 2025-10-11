@@ -83,6 +83,18 @@ inject("last_updated", os.date("%Y-%m-%d"));
 
 ## Misc. usage
 
+### Schema Validation
+
+Let's say you're loading a list of blog articles to render from a really long JSON file, and you want all articles to have a short description field. To ensure each article has such a `description` field by spitting out an error otherwise, you can use the `required` filter in your templates:
+
+```html
+{% for article in articles %}
+<p>{{ article.description | required("All articles need a description") }}</p>
+{% endfor }
+```
+
+This won't help with figuring out which article is missing a description, but at least you'll be sure all of them have it once you find the culprit.
+
 ### Exclude Analytics from Dev Builds
 
 You can check for the `__prod` boolean in your templates to exclude analytics & trackers from dev builds:

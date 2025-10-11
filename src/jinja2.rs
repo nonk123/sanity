@@ -7,7 +7,7 @@ use std::{
 };
 
 use color_eyre::eyre::{self, eyre};
-use minijinja::{Environment, context, value::merge_maps};
+use minijinja::{Environment, Error, ErrorKind, context, value::merge_maps};
 
 use crate::{minify, paths, poison};
 
@@ -26,6 +26,7 @@ impl JinjaEnvironment {
 
     fn make_env(templates: Weak<Mutex<HashMap<String, String>>>) -> Environment<'static> {
         let mut base = Environment::new();
+        base.add_filter("required", required_filter);
         base.set_loader(move |name| {
             if let Some(templates) = templates.upgrade() {
                 Ok(templates.lock().unwrap().get(name).map(String::to_string))
@@ -97,4 +98,15 @@ fn template_name(path: &Path) -> eyre::Result<String> {
     }
 
     Ok(name)
+}
+
+fn required_filter(
+    value: Option<minijinja::Value>,
+    error_message: String,
+) -> Result<minijinja::Value, Error> {
+    if let Some(value) = value {
+        Ok(value)
+    } else {
+        Err(Error::new(ErrorKind::InvalidOperation, error_message))
+    }
 }
