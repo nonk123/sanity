@@ -118,7 +118,7 @@ async fn main() -> eyre::Result<()> {
         }
     };
 
-    return Ok(());
+    Ok(())
 }
 
 async fn run_server(port: u16) -> eyre::Result<()> {

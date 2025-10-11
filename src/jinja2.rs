@@ -21,7 +21,7 @@ impl JinjaEnvironment {
         let templates = Arc::new(Mutex::new(HashMap::new()));
         let weak = Arc::downgrade(&templates);
         let base = Self::make_env(weak);
-        return Self { templates, base };
+        Self { templates, base }
     }
 
     fn make_env(templates: Weak<Mutex<HashMap<String, String>>>) -> Environment<'static> {

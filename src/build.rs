@@ -14,10 +14,10 @@ use crate::{
     fsutil::is_underscored, jinja2::JinjaEnvironment, lua::Shebang as LuaShebang, minify, paths,
 };
 
-static BUILD_STATUS: RwLock<()> = RwLock::const_new(());
+static BUILD: RwLock<()> = RwLock::const_new(());
 
 pub async fn read() -> RwLockReadGuard<'static, ()> {
-    BUILD_STATUS.read().await
+    BUILD.read().await
 }
 
 pub async fn run() {
@@ -28,26 +28,19 @@ pub async fn run() {
     };
 
     let result = {
-        let _lock = BUILD_STATUS.write().await;
+        let _lock = BUILD.write().await;
         run_inner()
     };
 
     match result {
         Ok(()) => info!("Site built!"),
-        Err(ref report) => error!("Build failed: {:?}", report),
+        Err(report) => error!("Build failed: {:?}", report),
     }
 
     if let Some(start) = start {
         let end = Instant::now();
         let duration = end.duration_since(start);
         info!("Took {}ms", duration.as_millis());
-    }
-}
-
-pub fn nuke() {
-    match nuke_inner() {
-        Ok(()) => info!("Site cleaned!"),
-        Err(err) => error!("Clean failed: {}", err),
     }
 }
 
@@ -64,6 +57,13 @@ fn run_inner() -> eyre::Result<()> {
     state.render_html()?;
 
     Ok(())
+}
+
+pub fn nuke() {
+    match nuke_inner() {
+        Ok(()) => info!("Site cleaned!"),
+        Err(err) => error!("Clean failed: {}", err),
+    }
 }
 
 fn nuke_inner() -> eyre::Result<()> {
@@ -103,12 +103,12 @@ impl State {
         let dest = paths::dist()?.join(branch.strip_prefix(paths::www()?)?);
         if branch.is_dir() {
             let _ = fs::create_dir_all(dest);
-            return self.process_dir(branch);
+            self.process_dir(branch)
         } else if self.processed_items.contains(branch) {
-            return Ok(());
+            Ok(())
         } else {
             self.processed_items.insert(branch.to_path_buf());
-            return self.process_file(branch, dest);
+            self.process_file(branch, dest)
         }
     }
 
@@ -119,12 +119,11 @@ impl State {
         }
 
         ls.sort_by(|a, b| a.as_os_str().cmp(b.as_os_str()));
-
         for child in ls {
             self.walk(&child)?;
         }
 
-        return Ok(());
+        Ok(())
     }
 
     fn process_file(&mut self, branch: &Path, mut dest: PathBuf) -> eyre::Result<()> {
@@ -146,11 +145,11 @@ impl State {
             Some("lua") if !underscored => {
                 self.lua.process(branch)?;
             }
-            Some("js") if !underscored && !recent => {
+            Some("js") if !recent => {
                 let data = fs::read(&branch)?;
                 minify::write(&dest, minify::Type::Js, data)?;
             }
-            Some("html") if !underscored && !recent => {
+            Some("html") if !recent => {
                 let data = fs::read(&branch)?;
                 minify::write(&dest, minify::Type::Html, data)?;
             }
