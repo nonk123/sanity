@@ -4,6 +4,10 @@ on:
   push:
     tags: [gh-actions]
 
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.ref_name }}
+
 jobs:
   build:
     name: Upload distribution for ${{ matrix.cfg.fancy-name }}
@@ -11,6 +15,7 @@ jobs:
     permissions:
       contents: write
     strategy:
+      fail-fast: true
       matrix:
         cfg:
           - name: release-linux
@@ -21,6 +26,8 @@ jobs:
             fancy-name: Windows
             os: windows-2022
             bin-ext: .exe
+    env:
+      OUTPATH: sanity-${{ matrix.cfg.name }}${{ matrix.cfg.bin-ext }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -31,12 +38,13 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-
       - name: Build
         run: cargo fetch --locked && cargo build --release
       - name: Rename binary artifact
-        run: cp target/release/sanity${{ matrix.cfg.bin-ext }} sanity-${{ matrix.cfg.name }}${{ matrix.cfg.bin-ext }}
+        run: cp target/release/sanity${{ matrix.cfg.bin-ext }} ${{ env.OUTPATH }}
       - name: Release binary
         uses: softprops/action-gh-release@v2
         with:
-          files: sanity-${{ matrix.cfg.name }}${{ matrix.cfg.bin-ext }}
+          files: ${{ env.OUTPATH }}
