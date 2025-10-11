@@ -111,6 +111,7 @@ async fn main() -> eyre::Result<()> {
             run_server(port).await?;
         }
     };
+
     return Ok(());
 }
 
