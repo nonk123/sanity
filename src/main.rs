@@ -2,8 +2,13 @@
 extern crate log;
 
 use std::{
-    collections::HashSet, convert::Infallible, ffi::OsStr, fs, net::SocketAddr, sync::OnceLock,
-    thread, time::Duration,
+    collections::HashSet,
+    convert::Infallible,
+    ffi::OsStr,
+    fs,
+    net::SocketAddr,
+    sync::{OnceLock, mpsc},
+    time::Duration,
 };
 
 use clap::{Parser, Subcommand};
@@ -19,7 +24,7 @@ use hyper::{
 use hyper_util::rt::TokioIo;
 use log::LevelFilter;
 use notify::{EventKind, RecursiveMode};
-use notify_debouncer_full::{DebounceEventResult, DebouncedEvent, new_debouncer};
+use notify_debouncer_full::{DebouncedEvent, new_debouncer};
 use tokio::net::TcpListener;
 
 mod build;
@@ -95,7 +100,7 @@ async fn main() -> eyre::Result<()> {
     ARGS.set(Args::parse()).unwrap();
     match args().command() {
         Commands::Build => {
-            build::run();
+            build::run().await;
         }
         Commands::Clean => {
             build::nuke();
@@ -104,11 +109,12 @@ async fn main() -> eyre::Result<()> {
             lua::write_lualib();
         }
         Commands::Watch => {
-            build::run();
-            watch()?;
+            watch().await?;
         }
         Commands::Server { port } => {
+            let watch = tokio::spawn(watch());
             run_server(port).await?;
+            watch.await??;
         }
     };
 
@@ -116,9 +122,6 @@ async fn main() -> eyre::Result<()> {
 }
 
 async fn run_server(port: u16) -> eyre::Result<()> {
-    build::run();
-    thread::spawn(watch);
-
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     let listener = TcpListener::bind(addr).await?;
     info!("Hosting dev-server on http://localhost:{}", port);
@@ -143,17 +146,10 @@ async fn run_server(port: u16) -> eyre::Result<()> {
     }
 }
 
-fn waste_cycles() {
-    thread::sleep(Duration::from_millis(100));
-}
-
 async fn http_service(
     req: Request<Incoming>,
 ) -> core::result::Result<Response<Full<Bytes>>, Infallible> {
-    while build::in_progress() {
-        waste_cycles();
-    }
-
+    let _lock = build::read().await;
     let query = req.uri().path()[1..].to_string();
 
     match _http_service(req) {
@@ -196,7 +192,7 @@ fn _http_service(req: Request<Incoming>) -> eyre::Result<Response<Full<Bytes>>> 
     Ok(res)
 }
 
-fn process_events(events: Vec<DebouncedEvent>) -> eyre::Result<()> {
+async fn process_events(events: Vec<DebouncedEvent>) -> eyre::Result<()> {
     let mut targets = HashSet::new();
 
     for event in events {
@@ -217,37 +213,36 @@ fn process_events(events: Vec<DebouncedEvent>) -> eyre::Result<()> {
         let _ = fs::remove_file(path);
     }
     if redo {
-        build::run();
+        build::run().await;
     }
 
     Ok(())
 }
 
-fn watch() -> eyre::Result<()> {
-    let mut debouncer =
-        new_debouncer(
-            DEBOUNCE_TIMEOUT,
-            None,
-            |result: DebounceEventResult| match result {
-                Ok(events) => {
-                    if let Err(error) = process_events(events) {
-                        error!("{:?}", error);
-                    }
-                }
-                Err(errors) => {
-                    for error in errors {
-                        error!("{:?}", error);
-                    }
-                }
-            },
-        )?;
+async fn watch() -> eyre::Result<()> {
+    let (tx, rx) = mpsc::channel();
+    let mut debouncer = new_debouncer(DEBOUNCE_TIMEOUT, None, tx)?;
 
+    build::run().await;
     debouncer.watch(&paths::www()?, RecursiveMode::Recursive)?;
     info!("Watching {:?}", paths::www()?);
 
-    loop {
-        waste_cycles();
+    for result in rx {
+        match result {
+            Ok(events) => {
+                if let Err(error) = process_events(events).await {
+                    error!("{:?}", error);
+                }
+            }
+            Err(errors) => {
+                for error in errors {
+                    error!("{:?}", error);
+                }
+            }
+        }
     }
+
+    Ok(())
 }
 
 static ARGS: OnceLock<Args> = OnceLock::new();

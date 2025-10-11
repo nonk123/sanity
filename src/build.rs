@@ -3,33 +3,34 @@ use std::{
     ffi::OsStr,
     fs,
     path::{Path, PathBuf},
-    sync::atomic::{AtomicBool, Ordering},
     time::Instant,
 };
 
 use color_eyre::eyre::{self, eyre};
 use minijinja::{context, value::merge_maps};
+use tokio::sync::{RwLock, RwLockReadGuard};
 
 use crate::{
     fsutil::is_underscored, jinja2::JinjaEnvironment, lua::Shebang as LuaShebang, minify, paths,
 };
 
-static BUILD_STATUS: AtomicBool = AtomicBool::new(false);
+static BUILD_STATUS: RwLock<()> = RwLock::const_new(());
 
-pub fn in_progress() -> bool {
-    BUILD_STATUS.load(Ordering::Relaxed)
+pub async fn read() -> RwLockReadGuard<'static, ()> {
+    BUILD_STATUS.read().await
 }
 
-pub fn run() {
+pub async fn run() {
     let start = if crate::args().profile_build_times {
         Some(Instant::now())
     } else {
         None
     };
 
-    BUILD_STATUS.store(true, Ordering::Relaxed);
-    let result = run_inner();
-    BUILD_STATUS.store(false, Ordering::Relaxed);
+    let result = {
+        let _lock = BUILD_STATUS.write().await;
+        run_inner()
+    };
 
     match result {
         Ok(()) => info!("Site built!"),
