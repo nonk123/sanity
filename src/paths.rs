@@ -1,4 +1,4 @@
-type SeriousPath = crate::Result<std::path::PathBuf>;
+type SeriousPath = color_eyre::eyre::Result<std::path::PathBuf>;
 
 pub fn root() -> SeriousPath {
     Ok(std::env::current_dir()?.canonicalize()?)

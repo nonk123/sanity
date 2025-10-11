@@ -1,6 +1,6 @@
-use crate::Result;
+use color_eyre::eyre;
 
-pub fn inject(input: String) -> Result<String> {
+pub fn inject(input: String) -> eyre::Result<String> {
     #[cfg(feature = "llm-poison")]
     return _inject(input);
     #[cfg(not(feature = "llm-poison"))]

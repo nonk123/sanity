@@ -7,7 +7,7 @@ use std::{
 };
 
 use clap::{Parser, Subcommand};
-use color_eyre::eyre::eyre;
+use color_eyre::eyre::{self, eyre};
 use http_body_util::Full;
 use hyper::{
     Request, Response,
@@ -23,7 +23,10 @@ use notify_debouncer_full::{DebounceEventResult, DebouncedEvent, new_debouncer};
 use tokio::net::TcpListener;
 
 mod build;
+mod fsutil;
+mod jinja2;
 mod lua;
+mod minify;
 mod paths;
 mod poison;
 
@@ -81,10 +84,8 @@ pub enum Commands {
     LuaLib,
 }
 
-pub type Result<T> = color_eyre::eyre::Result<T>;
-
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> eyre::Result<()> {
     let _ = color_eyre::install();
 
     pretty_env_logger::formatted_builder()
@@ -94,7 +95,7 @@ async fn main() -> Result<()> {
     ARGS.set(Args::parse()).unwrap();
     match args().command() {
         Commands::Build => {
-            build::run()?;
+            build::run();
         }
         Commands::Clean => {
             build::nuke()?;
@@ -103,7 +104,8 @@ async fn main() -> Result<()> {
             fs::write(paths::root()?.join("_sanity.lua"), include_str!("lib.lua"))?;
         }
         Commands::Watch => {
-            watcher()?;
+            build::run();
+            watch()?;
         }
         Commands::Server { port } => {
             run_server(port).await?;
@@ -112,8 +114,9 @@ async fn main() -> Result<()> {
     return Ok(());
 }
 
-async fn run_server(port: u16) -> Result<()> {
-    thread::spawn(watcher);
+async fn run_server(port: u16) -> eyre::Result<()> {
+    build::run();
+    thread::spawn(watch);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     let listener = TcpListener::bind(addr).await?;
@@ -162,7 +165,7 @@ async fn http_service(
     }
 }
 
-fn _http_service(req: Request<Incoming>) -> Result<Response<Full<Bytes>>> {
+fn _http_service(req: Request<Incoming>) -> eyre::Result<Response<Full<Bytes>>> {
     let in_path = req.uri().path()[1..].to_string();
     let mut out_path = paths::dist()?.join(in_path);
 
@@ -192,7 +195,7 @@ fn _http_service(req: Request<Incoming>) -> Result<Response<Full<Bytes>>> {
     Ok(res)
 }
 
-fn process_events(events: Vec<DebouncedEvent>) -> Result<()> {
+fn process_events(events: Vec<DebouncedEvent>) -> eyre::Result<()> {
     let mut targets = HashSet::new();
 
     for event in events {
@@ -213,15 +216,13 @@ fn process_events(events: Vec<DebouncedEvent>) -> Result<()> {
         let _ = fs::remove_file(path);
     }
     if redo {
-        rebuild();
+        build::run();
     }
 
     Ok(())
 }
 
-fn watcher() -> Result<()> {
-    rebuild();
-
+fn watch() -> eyre::Result<()> {
     let mut debouncer =
         new_debouncer(
             DEBOUNCE_TIMEOUT,
@@ -245,13 +246,6 @@ fn watcher() -> Result<()> {
 
     loop {
         waste_cycles();
-    }
-}
-
-fn rebuild() {
-    match build::run() {
-        Ok(()) => info!("Rebuilt!"),
-        Err(report) => error!("Failed to rebuild: {:?}", report),
     }
 }
 

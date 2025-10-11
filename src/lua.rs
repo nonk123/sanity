@@ -5,11 +5,11 @@ use std::{
 };
 
 use chrono::{DateTime, Utc};
-use color_eyre::eyre::eyre;
+use color_eyre::eyre::{self, eyre};
 use minijinja::Value as JValue;
 use mlua::{FromLuaMulti, IntoLua, Lua, LuaSerdeExt, Value};
 
-use crate::{Result, paths};
+use crate::paths;
 
 pub struct Render {
     pub template: String,
@@ -22,11 +22,11 @@ pub struct Shebang {
 }
 
 impl Shebang {
-    pub fn try_new() -> Result<Self> {
+    pub fn try_new() -> eyre::Result<Self> {
         try_new_shebang()
     }
 
-    pub fn process(&self, file: &Path) -> Result<()> {
+    pub fn process(&self, file: &Path) -> eyre::Result<()> {
         self.lua.load(file).exec()?;
         Ok(())
     }
@@ -41,7 +41,7 @@ pub struct State {
     pub global_context: HashMap<String, JValue>,
 }
 
-fn try_new_shebang() -> Result<Shebang> {
+fn try_new_shebang() -> eyre::Result<Shebang> {
     let lua = Lua::new();
 
     lua.set_app_data(State {
@@ -98,8 +98,8 @@ trait LuaRegisterExt {
     fn register<Arg, T>(
         &self,
         name: &str,
-        func: impl Fn(&Lua, Arg) -> crate::Result<T> + Send + 'static,
-    ) -> Result<()>
+        func: impl Fn(&Lua, Arg) -> eyre::Result<T> + Send + 'static,
+    ) -> eyre::Result<()>
     where
         Arg: FromLuaMulti + 'static,
         T: IntoLua + 'static;
@@ -109,8 +109,8 @@ impl LuaRegisterExt for Lua {
     fn register<Arg, T>(
         &self,
         name: &str,
-        func: impl Fn(&Lua, Arg) -> crate::Result<T> + Send + 'static,
-    ) -> Result<()>
+        func: impl Fn(&Lua, Arg) -> eyre::Result<T> + Send + 'static,
+    ) -> eyre::Result<()>
     where
         Arg: FromLuaMulti + 'static,
         T: IntoLua + 'static,
