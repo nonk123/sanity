@@ -43,22 +43,11 @@ pub fn run() {
     }
 }
 
-pub fn nuke() -> eyre::Result<()> {
-    if !paths::dist()?.exists() {
-        return Ok(());
+pub fn nuke() {
+    match nuke_inner() {
+        Ok(()) => info!("Site cleaned!"),
+        Err(err) => error!("Clean failed: {}", err),
     }
-
-    for child in fs::read_dir(paths::dist()?)? {
-        let child = child?.path();
-
-        if child.is_dir() {
-            fs::remove_dir_all(child)?;
-        } else {
-            fs::remove_file(child)?;
-        }
-    }
-
-    Ok(())
 }
 
 fn run_inner() -> eyre::Result<()> {
@@ -72,6 +61,24 @@ fn run_inner() -> eyre::Result<()> {
     let mut state = State::new()?;
     state.walk(&paths::www()?)?;
     state.render_html()?;
+
+    Ok(())
+}
+
+fn nuke_inner() -> eyre::Result<()> {
+    if !paths::dist()?.exists() {
+        return Ok(());
+    }
+
+    for child in fs::read_dir(paths::dist()?)? {
+        let child = child?.path();
+
+        if child.is_dir() {
+            fs::remove_dir_all(child)?;
+        } else {
+            fs::remove_file(child)?;
+        }
+    }
 
     Ok(())
 }

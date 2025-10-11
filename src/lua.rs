@@ -94,6 +94,18 @@ fn try_new_shebang() -> eyre::Result<Shebang> {
     Ok(Shebang { lua })
 }
 
+pub fn write_lualib() {
+    match write_lualib_inner() {
+        Ok(()) => info!("Wrote _sanity.lua"),
+        Err(err) => error!("Failed to write _sanity.lua: {}", err),
+    }
+}
+
+fn write_lualib_inner() -> eyre::Result<()> {
+    fs::write(paths::root()?.join("_sanity.lua"), include_str!("lib.lua"))?;
+    Ok(())
+}
+
 trait LuaRegisterExt {
     fn register<Arg, T>(
         &self,

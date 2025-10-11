@@ -98,10 +98,10 @@ async fn main() -> eyre::Result<()> {
             build::run();
         }
         Commands::Clean => {
-            build::nuke()?;
+            build::nuke();
         }
         Commands::LuaLib => {
-            fs::write(paths::root()?.join("_sanity.lua"), include_str!("lib.lua"))?;
+            lua::write_lualib();
         }
         Commands::Watch => {
             build::run();
