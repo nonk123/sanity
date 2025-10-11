@@ -184,6 +184,7 @@ fn _http_service(req: Request<Incoming>) -> eyre::Result<Response<Full<Bytes>>> 
         Some("html") => Some("text/html"),
         Some("css") => Some("text/css"),
         Some("js") => Some("text/javascript"),
+        Some("svg") => Some("image/svg+xml"),
         _ => None,
     } {
         res.headers_mut().insert(CONTENT_TYPE, x.parse()?);
