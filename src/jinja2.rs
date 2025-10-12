@@ -19,8 +19,7 @@ pub struct JinjaEnvironment {
 impl JinjaEnvironment {
     pub fn new() -> Self {
         let templates = Arc::new(Mutex::new(HashMap::new()));
-        let weak = Arc::downgrade(&templates);
-        let base = Self::make_env(weak);
+        let base = Self::make_env(Arc::downgrade(&templates));
         Self { templates, base }
     }
 
