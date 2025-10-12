@@ -1,6 +1,5 @@
 use std::{
     collections::HashSet,
-    ffi::OsStr,
     fs,
     path::{Path, PathBuf},
     time::Instant,
@@ -10,9 +9,7 @@ use color_eyre::eyre::{self, eyre};
 use minijinja::{context, value::merge_maps};
 use tokio::sync::{RwLock, RwLockReadGuard};
 
-use crate::{
-    fsutil::is_underscored, jinja2::JinjaEnvironment, lua::Shebang as LuaShebang, minify, paths,
-};
+use crate::{fs::PathExt, jinja2::JinjaEnvironment, lua::Shebang as LuaShebang, minify, paths};
 
 static BUILD: RwLock<()> = RwLock::const_new(());
 
@@ -127,10 +124,9 @@ impl State {
     }
 
     fn process_file(&mut self, branch: &Path, mut dest: PathBuf) -> eyre::Result<()> {
-        let ext = branch.extension().and_then(OsStr::to_str);
-        let underscored = is_underscored(branch);
-        let recent = dest.exists()
-            && fs::metadata(&dest)?.modified()? >= fs::metadata(&branch)?.modified()?;
+        let ext = branch.extension_str();
+        let underscored = branch.is_underscored();
+        let recent = dest.exists() && dest.last_modified()? >= branch.last_modified()?;
 
         match ext {
             Some("j2") => {
@@ -170,7 +166,7 @@ impl State {
 
         for name in names {
             let target = paths::dist()?.join(&name);
-            if !is_underscored(&target) {
+            if !target.is_underscored() {
                 self.jinja.render(&name, &target, &merge(&context! {}))?;
             }
         }

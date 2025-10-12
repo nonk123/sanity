@@ -1,15 +1,14 @@
 use std::{
     collections::{HashMap, HashSet},
-    ffi::OsStr,
     fs,
-    path::{Component, Path},
+    path::Path,
     sync::{Arc, Mutex, Weak},
 };
 
 use color_eyre::eyre::{self, eyre};
 use minijinja::{Environment, Error, ErrorKind, context, value::merge_maps};
 
-use crate::{minify, paths, poison};
+use crate::{fs::PathExt, minify, poison};
 
 pub struct JinjaEnvironment {
     templates: Arc<Mutex<HashMap<String, String>>>,
@@ -37,7 +36,7 @@ impl JinjaEnvironment {
     }
 
     pub fn register(&mut self, path: &Path) -> eyre::Result<()> {
-        let name = template_name(path)?;
+        let name = path.template_name()?;
         let source = fs::read_to_string(path)?;
         self.templates.lock().unwrap().insert(name, source);
         Ok(())
@@ -69,7 +68,7 @@ impl JinjaEnvironment {
             data = poison::inject(data)?;
         }
 
-        if let Some("html") = target.extension().and_then(OsStr::to_str) {
+        if let Some("html") = target.extension_str() {
             minify::write(&target, minify::Type::Html, data)?;
         } else {
             fs::write(target, data)?;
@@ -77,26 +76,6 @@ impl JinjaEnvironment {
 
         Ok(())
     }
-}
-
-fn template_name(path: &Path) -> eyre::Result<String> {
-    let mut name = String::new();
-
-    let base = path.with_extension("");
-    let components = base.strip_prefix(paths::www()?)?.components();
-
-    for comp in components {
-        let Component::Normal(x) = comp else {
-            continue;
-        };
-        if !name.is_empty() {
-            name += "/";
-        }
-        let x = x.as_encoded_bytes().iter().cloned().collect();
-        name += &String::from_utf8(x)?;
-    }
-
-    Ok(name)
 }
 
 fn required_filter(

@@ -4,8 +4,6 @@ extern crate log;
 use std::{
     collections::HashSet,
     convert::Infallible,
-    ffi::OsStr,
-    fs,
     net::SocketAddr,
     sync::{OnceLock, mpsc},
     time::Duration,
@@ -27,8 +25,10 @@ use notify::{EventKind, RecursiveMode};
 use notify_debouncer_full::{DebouncedEvent, new_debouncer};
 use tokio::net::TcpListener;
 
+use crate::fs::PathExt;
+
 mod build;
-mod fsutil;
+mod fs;
 mod jinja2;
 mod lua;
 mod minify;
@@ -178,9 +178,9 @@ fn _http_service(req: Request<Incoming>) -> eyre::Result<Response<Full<Bytes>>> 
         return Err(eyre!("File doesn't exist: {:?}", out_path));
     }
 
-    let data = fs::read(out_path.clone())?;
+    let data = std::fs::read(out_path.clone())?;
     let mut res = Response::new(Full::new(Bytes::from(data)));
-    if let Some(x) = match out_path.extension().and_then(OsStr::to_str) {
+    if let Some(x) = match out_path.extension_str() {
         Some("html") => Some("text/html"),
         Some("css") => Some("text/css"),
         Some("js") => Some("text/javascript"),
@@ -211,7 +211,7 @@ async fn process_events(events: Vec<DebouncedEvent>) -> eyre::Result<()> {
 
     let redo = !targets.is_empty();
     for path in targets {
-        let _ = fs::remove_file(path);
+        let _ = std::fs::remove_file(path);
     }
     if redo {
         build::run().await;
