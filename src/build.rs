@@ -126,7 +126,7 @@ impl State {
     fn process_file(&mut self, branch: &Path, mut dest: PathBuf) -> eyre::Result<()> {
         let ext = branch.extension_str();
         let underscored = branch.is_underscored();
-        let recent = dest.exists() && dest.last_modified()? >= branch.last_modified()?;
+        let recent = branch.more_recent_than(&dest)?;
 
         match ext {
             Some("j2") => {

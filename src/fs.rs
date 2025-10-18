@@ -12,6 +12,7 @@ pub trait PathExt {
     fn extension_str(&self) -> Option<&str>;
     fn is_underscored(&self) -> bool;
     fn last_modified(&self) -> eyre::Result<SystemTime>;
+    fn more_recent_than(&self, other: &Path) -> eyre::Result<bool>;
     fn template_name(&self) -> eyre::Result<String>;
 }
 
@@ -30,6 +31,10 @@ impl<T: AsRef<Path>> PathExt for T {
 
     fn last_modified(&self) -> eyre::Result<SystemTime> {
         Ok(std::fs::metadata(self)?.modified()?)
+    }
+
+    fn more_recent_than(&self, other: &Path) -> eyre::Result<bool> {
+        Ok(other.exists() && other.last_modified()? >= self.last_modified()?)
     }
 
     fn template_name(&self) -> eyre::Result<String> {
