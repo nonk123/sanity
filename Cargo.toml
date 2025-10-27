@@ -30,6 +30,6 @@ mlua = { version = "0.11.4", features = [
 serde = { version = "1.0.228", features = ["alloc"] }
 serde_json = { version = "1.0.145", features = ["alloc"] }
 lol_html = { version = "2.7.0", optional = true }
-minify-html-onepass = "0.16.4"
+minify-html-onepass = "0.18.1"
 minify-js = "0.6.0"
 chrono = "0.4.42"
