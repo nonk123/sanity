@@ -10,14 +10,14 @@ concurrency:
 
 jobs:
   build:
-    name: Upload distribution for ${{ matrix.cfg.fancy-name }}
-    runs-on: ${{ matrix.cfg.os }}
+    name: Upload distribution for ${{ matrix.fancy-name }}
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: write
     strategy:
       fail-fast: true
       matrix:
-        cfg:
+        include:
           - name: release-linux
             fancy-name: Linux
             os: ubuntu-24.04
@@ -27,7 +27,7 @@ jobs:
             os: windows-2022
             bin-ext: .exe
     env:
-      OUTPATH: sanity-${{ matrix.cfg.name }}${{ matrix.cfg.bin-ext }}
+      OUTPATH: sanity-${{ matrix.name }}${{ matrix.bin-ext }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -43,7 +43,7 @@ jobs:
       - name: Build
         run: cargo fetch --locked && cargo build --release
       - name: Rename binary artifact
-        run: cp target/release/sanity${{ matrix.cfg.bin-ext }} ${{ env.OUTPATH }}
+        run: cp target/release/sanity${{ matrix.bin-ext }} ${{ env.OUTPATH }}
       - name: Release binary
         uses: softprops/action-gh-release@v2
         with:
