@@ -29,20 +29,27 @@ Here are some of the sites powered by `sanity`:
 - [schwung.us](https://schwung.us) ([repo](https://github.com/Schwungus/schwung.us))
 - [cantsleep.cc](https://cantsleep.cc) ([repo](https://github.com/LocalInsomniac/LocalInsomniac.github.io))
 
-## Command-Line Usage
-
-Download a `sanity` binary from [available releases](https://github.com/nonk123/sanity/releases#latest). Put your markup inside the `www` subdirectory. Run the provided binary. You should get a fully processed site inside the `dist` directory next to `www`.
-
-Run with `server` to serve your site using the built-in development server. It rebuilds the site whenever the contents of `www` change. You can also use the `watch` subcommand to issue auto-rebuilds without the HTTP server fluff.
-
-Discover more options by running `sanity` with `--help`.
-
 ## Integrations
 
 You can use `sanity` without ever touching the command-line by installing one of our IDE extensions:
 
 - [for Visual Studio Code](https://github.com/nonk123/vscode-sanity).
 - [for GNU/Emacs](https://github.com/nonk123/sanity-emacs).
+
+## Basic Usage
+
+> [!NOTE]
+> Make sure to add the `dist` folder to your `.gitignore`. It doesn't (usually) make sense to version auto-generated files.
+
+Place your Jinja2 templates, SCSS sheets, and [Lua scripts](#basic-scripting) inside the `www` folder. Run sanity from [the command line](#command-line-usage) or through [one of the integration packages](#integrations). You should get a fully processed site inside the `dist` folder right next to `www`.
+
+You can either upload the contents of `dist` to a free website-hosting such as [Neocities](https://neocities.org) or [GitHub Pages](https://pages.github.com), or you can serve them locally using the built-in `sanity` live-server before pushing the site to production. The details of the latter scenario depend on the integration you're using. If you're unsure, just use [VSCode](https://code.visualstudio.com) and [our integration](https://github.com/nonk123/vscode-sanity): this combo runs the live-server automatically once you open your project folder.
+
+## Command-Line Usage
+
+Download a binary from [available releases](https://github.com/nonk123/sanity/releases#latest). Run without arguments for a one-off build. Run with `server` to serve your site using the built-in development server; it rebuilds the site whenever the contents of `www` change. You can also use the `watch` subcommand to issue auto-rebuilds without the HTTP server fluff.
+
+Discover more options by running `sanity` with `--help`.
 
 ## Basic Scripting
 
