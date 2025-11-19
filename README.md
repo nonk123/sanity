@@ -1,7 +1,7 @@
 # sanity
 
 > [!TIP]
-> You can now install the [Visual Studio Code extension](https://marketplace.visualstudio.com/items?itemName=nonk123.vscode-sanity-liveserver) for a more pleasant experience!
+> You can now install the [Visual Studio Code extension](https://marketplace.visualstudio.com/items?itemName=nonk123.vscode-sanity-liveserver) for a more pleasant experience! See other supported IDEs in [the integrations section](#integrations)!
 
 The only sane static site generator in existence. Refer to the [examples directory](examples) for a quickstart.
 
@@ -29,7 +29,7 @@ Here are some of the sites powered by `sanity`:
 - [schwung.us](https://schwung.us) ([repo](https://github.com/Schwungus/schwung.us))
 - [cantsleep.cc](https://cantsleep.cc) ([repo](https://github.com/LocalInsomniac/LocalInsomniac.github.io))
 
-## Usage
+## Command-Line Usage
 
 Download a `sanity` binary from [available releases](https://github.com/nonk123/sanity/releases#latest). Put your markup inside the `www` subdirectory. Run the provided binary. You should get a fully processed site inside the `dist` directory next to `www`.
 
@@ -37,9 +37,16 @@ Run with `server` to serve your site using the built-in development server. It r
 
 Discover more options by running `sanity` with `--help`.
 
+## Integrations
+
+You can use `sanity` without ever touching the command-line by installing one of our IDE extensions:
+
+- [for Visual Studio Code](https://github.com/nonk123/vscode-sanity).
+- [for GNU/Emacs](https://github.com/nonk123/sanity-emacs).
+
 ## Basic Scripting
 
-There isn't much to scripting besides the custom `render` function. Take a look at this static blog example:
+There isn't much to scripting sanity besides the custom `render` function. Take a look at this static blog example:
 
 ```lua
 local blog = {
