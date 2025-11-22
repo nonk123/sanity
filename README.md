@@ -138,7 +138,7 @@ You can check for the `__prod` boolean in your templates to exclude analytics & 
 
 ### LuaLS Definitions
 
-Use the `lualib` subcommand to add a LuaLS definitions file to your project folder. This should hide the 999 warnings about undefined functions you've been getting. Make sure to point your IDE to this file, e.g. in VSCode `settings.json`:
+Use the `lua-lib` subcommand to add a LuaLS definitions file to your project folder. This should hide the 999 warnings about undefined functions you've been getting. Make sure to point your IDE to this file, e.g. in VSCode `settings.json`:
 
 ```json
 {
