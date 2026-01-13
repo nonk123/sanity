@@ -8,7 +8,7 @@ default = []
 llm-poison = ["dep:lol_html"]
 
 [dependencies]
-clap = { version = "4.5.53", features = ["derive"] }
+clap = { version = "4.5.54", features = ["derive"] }
 color-eyre = "0.6.5"
 grass = "0.13.4"
 http-body-util = "0.1.3"
