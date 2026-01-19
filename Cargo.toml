@@ -32,4 +32,4 @@ serde_json = { version = "1.0.149", features = ["alloc"] }
 lol_html = { version = "2.7.1", optional = true }
 minify-html-onepass = "0.18.1"
 minify-js = "0.6.0"
-chrono = "0.4.42"
+chrono = "0.4.43"
