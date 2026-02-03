@@ -20,7 +20,7 @@ notify = "8.2.0"
 tokio = { version = "1.49.0", features = ["full"] }
 pretty_env_logger = "0.5.0"
 log = { version = "0.4.29", features = ["std"] }
-mlua = { version = "0.11.5", features = [
+mlua = { version = "0.11.6", features = [
     "luajit",
     "serialize",
     "send",
