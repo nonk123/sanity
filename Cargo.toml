@@ -8,13 +8,13 @@ default = []
 llm-poison = ["dep:lol_html"]
 
 [dependencies]
-clap = { version = "4.5.58", features = ["derive"] }
+clap = { version = "4.5.60", features = ["derive"] }
 color-eyre = "0.6.5"
 grass = "0.13.4"
 http-body-util = "0.1.3"
 hyper = { version = "1.8.1", features = ["http1", "server"] }
 hyper-util = { version = "0.1.20", features = ["full"] }
-minijinja = { version = "2.15.1", features = ["loader", "multi_template"] }
+minijinja = { version = "2.16.0", features = ["loader", "multi_template"] }
 notify-debouncer-full = "0.7.0"
 notify = "8.2.0"
 tokio = { version = "1.49.0", features = ["full"] }
@@ -29,7 +29,7 @@ mlua = { version = "0.11.6", features = [
 ] }
 serde = { version = "1.0.228", features = ["alloc"] }
 serde_json = { version = "1.0.149", features = ["alloc"] }
-lol_html = { version = "2.7.1", optional = true }
+lol_html = { version = "2.7.2", optional = true }
 minify-html-onepass = "0.18.1"
 minify-js = "0.6.0"
-chrono = "0.4.43"
+chrono = "0.4.44"
