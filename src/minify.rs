@@ -12,7 +12,7 @@ pub enum Type {
     Js,
 }
 
-pub fn write<T: Into<Vec<u8>>>(target: &Path, file_type: Type, data: T) -> eyre::Result<()> {
+pub fn write(target: &Path, file_type: Type, data: impl Into<Vec<u8>>) -> eyre::Result<()> {
     let orig_data = data.into();
     let data = orig_data.clone();
     let prod = crate::args().prod();
@@ -24,14 +24,11 @@ pub fn write<T: Into<Vec<u8>>>(target: &Path, file_type: Type, data: T) -> eyre:
     };
 
     match minified {
-        Ok(data) => {
-            fs::write(target, data)?;
-            Ok(())
-        }
+        Ok(data) => Ok(fs::write(target, data)?),
         Err(err) => {
-            error!("Encountered error while minifying {:?}: {:?}", target, err);
+            error!("minify {:?}: {:?}", target, err);
             error!("Writing original file contents to destination for you to debug");
-            fs::write(target, orig_data)?;
+            let _ = fs::write(target, orig_data);
             Err(err)
         }
     }
