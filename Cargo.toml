@@ -5,7 +5,6 @@ edition = "2024"
 
 [features]
 default = []
-llm-poison = ["dep:lol_html"]
 
 [dependencies]
 clap = { version = "4.5.60", features = ["derive"] }
@@ -30,5 +29,9 @@ mlua = { version = "0.11.6", features = [
 serde = { version = "1.0.228", features = ["alloc"] }
 serde_json = { version = "1.0.149", features = ["alloc"] }
 minify-html-onepass = "0.18.1"
-minify-js = "0.6.0"
 chrono = "0.4.44"
+oxc_minifier = "0.117.0"
+oxc_parser = "0.117.0"
+oxc_allocator = "0.117.0"
+oxc_span = "0.117.0"
+oxc_codegen = "0.117.0"

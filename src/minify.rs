@@ -1,7 +1,11 @@
 use std::{fs, path::Path};
 
 use color_eyre::eyre::{self, eyre};
-use minify_js::{Session, TopLevelMode};
+use oxc_allocator::Allocator;
+use oxc_codegen::{Codegen, CodegenOptions, CommentOptions};
+use oxc_minifier::{Minifier, MinifierOptions};
+use oxc_parser::Parser;
+use oxc_span::SourceType;
 
 pub enum Type {
     Html,
@@ -15,7 +19,7 @@ pub fn write<T: Into<Vec<u8>>>(target: &Path, file_type: Type, data: T) -> eyre:
 
     let minified = match file_type {
         Type::Html if prod => html(target, data),
-        Type::Js if prod => js(target, data),
+        Type::Js if prod => js(data),
         _ => Ok(data.into()),
     };
 
@@ -36,21 +40,30 @@ pub fn write<T: Into<Vec<u8>>>(target: &Path, file_type: Type, data: T) -> eyre:
 fn html(target: &Path, mut data: Vec<u8>) -> eyre::Result<Vec<u8>> {
     let conf = minify_html_onepass::Cfg {
         minify_css: true,
-        minify_js: false, // FIXME: #9
+        minify_js: true,
     };
     minify_html_onepass::with_friendly_error(data.as_mut(), &conf)
         .map_err(|err| eyre!("{:?}: {:?}", target, err))
         .map(|x| data[..x].to_vec())
 }
 
-fn js(target: &Path, data: Vec<u8>) -> eyre::Result<Vec<u8>> {
-    // FIXME: #9.
-    if false {
-        let mut buf = Vec::new();
-        minify_js::minify(&mut Session::new(), TopLevelMode::Global, &data, &mut buf)
-            .map_err(|err| eyre!("{:?}: {:?}", target, err))
-            .map(|_| buf)
-    } else {
-        Ok(data)
-    }
+fn js(data: Vec<u8>) -> eyre::Result<Vec<u8>> {
+    let allocator = Allocator::default();
+
+    let data = String::from_utf8(data)?;
+    let mut parsed = Parser::new(&allocator, &data, SourceType::script()).parse();
+
+    let options = MinifierOptions::default();
+    let minifier = Minifier::new(options);
+    minifier.minify(&allocator, &mut parsed.program);
+
+    let generated = Codegen::new()
+        .with_options(CodegenOptions {
+            source_map_path: None,
+            minify: true,
+            comments: CommentOptions::disabled(),
+            ..CodegenOptions::default()
+        })
+        .build(&parsed.program);
+    Ok(generated.code.into_bytes())
 }

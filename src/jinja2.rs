@@ -8,7 +8,7 @@ use std::{
 use color_eyre::eyre::{self, eyre};
 use minijinja::{Environment, Error, ErrorKind, context, value::merge_maps};
 
-use crate::{fs::PathExt, minify, poison};
+use crate::{fs::PathExt, minify};
 
 pub struct JinjaEnvironment {
     templates: Arc<Mutex<HashMap<String, String>>>,
