@@ -21,8 +21,10 @@ use hyper::{
 };
 use hyper_util::rt::TokioIo;
 use log::LevelFilter;
-use notify::{EventKind, RecursiveMode};
-use notify_debouncer_full::{DebouncedEvent, new_debouncer};
+use notify_debouncer_full::{
+    DebouncedEvent, new_debouncer,
+    notify::{EventKind, RecursiveMode},
+};
 use tokio::net::TcpListener;
 
 use crate::fs::PathExt;

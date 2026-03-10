@@ -7,6 +7,7 @@ edition = "2024"
 default = []
 
 [dependencies]
+
 clap = { version = "4.5.60", features = ["derive"] }
 color-eyre = "0.6.5"
 grass = "0.13.4"
@@ -15,7 +16,6 @@ hyper = { version = "1.8.1", features = ["http1", "server"] }
 hyper-util = { version = "0.1.20", features = ["full"] }
 minijinja = { version = "2.17.1", features = ["loader", "multi_template"] }
 notify-debouncer-full = "0.7.0"
-notify = "8.2.0"
 tokio = { version = "1.50.0", features = ["full"] }
 pretty_env_logger = "0.5.0"
 log = { version = "0.4.29", features = ["std"] }
@@ -28,10 +28,13 @@ mlua = { version = "0.11.6", features = [
 ] }
 serde = { version = "1.0.228", features = ["alloc"] }
 serde_json = { version = "1.0.149", features = ["alloc"] }
-minify-html-onepass = "0.18.1"
 chrono = "0.4.44"
-oxc_minifier = "0.117.0"
-oxc_parser = "0.117.0"
-oxc_allocator = "0.117.0"
-oxc_span = "0.117.0"
-oxc_codegen = "0.117.0"
+
+minify-html-onepass = "0.18.1"
+
+# make sure to sync the version of these with the one demanded by `minify-html-onepass`, in order to shrink the dependency count by a bit.
+oxc_minifier = "0.95.0"
+oxc_parser = "0.95.0"
+oxc_allocator = "0.95.0"
+oxc_span = "0.95.0"
+oxc_codegen = "0.95.0"

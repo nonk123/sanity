@@ -51,7 +51,7 @@ fn js(data: Vec<u8>) -> eyre::Result<Vec<u8>> {
     let allocator = Allocator::default();
 
     let data = String::from_utf8(data)?;
-    let mut parsed = Parser::new(&allocator, &data, SourceType::script()).parse();
+    let mut parsed = Parser::new(&allocator, &data, SourceType::cjs()).parse();
 
     let options = MinifierOptions::default();
     let minifier = Minifier::new(options);
