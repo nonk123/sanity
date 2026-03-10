@@ -63,10 +63,7 @@ impl JinjaEnvironment {
             context.clone(),
         ]);
 
-        let mut data = self.base.get_template(name)?.render(context)?;
-        if !crate::args().antidote {
-            data = poison::inject(data)?;
-        }
+        let data = self.base.get_template(name)?.render(context)?;
 
         if let Some("html") = target.extension_str() {
             minify::write(&target, minify::Type::Html, data)?;

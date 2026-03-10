@@ -33,7 +33,6 @@ mod jinja2;
 mod lua;
 mod minify;
 mod paths;
-mod poison;
 
 const DEBOUNCE_TIMEOUT: Duration = Duration::from_millis(1000);
 
@@ -55,9 +54,6 @@ pub struct Args {
     /// ```
     #[arg(short, long)]
     force_prod: bool,
-    /// Bypass LLM poisoning if this feature is enabled at compile-time.
-    #[arg(short, long)]
-    antidote: bool,
     /// Output build times in milliseconds. Useful for profiling.
     #[arg(short, long)]
     profile_build_times: bool,

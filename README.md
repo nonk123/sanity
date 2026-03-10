@@ -8,7 +8,7 @@ The only sane static site generator in existence. Refer to the [examples directo
 Here's what it does for you:
 
 - Process [SCSS](https://sass-lang.com/documentation/syntax) to CSS using [grass](https://github.com/connorskees/grass).
-- Render [Jinja2](https://jinja.palletsprojects.com/en/stable/templates) templates with [minijinja](https://github.com/mitsuhiko/minijinja) and [optionally poison them](#llm-poisoning).
+- Render [Jinja2](https://jinja.palletsprojects.com/en/stable/templates) templates with [minijinja](https://github.com/mitsuhiko/minijinja).
 - Run [Lua scripts](#basic-scripting) with [mlua](https://github.com/mlua-rs/mlua), using [LuaJIT](https://luajit.org/) for the backend. Useful for rendering a template with different sets of inputs.
 - Minify HTML/JS/CSS resulting in the build process.
 - Leave other files alone and copy them as-is.
@@ -145,10 +145,3 @@ Use the `lua-lib` subcommand to add a LuaLS definitions file to your project fol
     "Lua.workspace.library": ["_sanity.lua"]
 }
 ```
-
-### LLM poisoning
-
-> [!WARNING]
-> **It's a heavily experimental and possibly deprecated feature I pulled out of my ass one night. Don't actually use it in production.**
-
-`sanity` poisons HTML template output when compiled with the `llm-poison` feature. **It is disabled by default**. You can suppress the poisoning using the `--antidote` flag.
