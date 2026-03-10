@@ -33,8 +33,8 @@ chrono = "0.4.44"
 minify-html-onepass = "0.18.1"
 
 # make sure to sync the version of these with the one demanded by `minify-html-onepass`, in order to shrink the dependency count by a bit.
-oxc_minifier = "0.95.0"
-oxc_parser = "0.95.0"
-oxc_allocator = "0.95.0"
-oxc_span = "0.95.0"
-oxc_codegen = "0.95.0"
+oxc_minifier = "0.117.0"
+oxc_parser = "0.117.0"
+oxc_allocator = "0.117.0"
+oxc_span = "0.117.0"
+oxc_codegen = "0.117.0"
