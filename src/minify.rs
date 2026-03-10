@@ -1,6 +1,6 @@
 use std::{fs, path::Path};
 
-use color_eyre::eyre::{self, eyre};
+use color_eyre::eyre;
 use oxc_allocator::Allocator;
 use oxc_codegen::{Codegen, CodegenOptions, CommentOptions};
 use oxc_minifier::{Minifier, MinifierOptions};
@@ -18,7 +18,7 @@ pub fn write<T: Into<Vec<u8>>>(target: &Path, file_type: Type, data: T) -> eyre:
     let prod = crate::args().prod();
 
     let minified = match file_type {
-        Type::Html if prod => html(target, data),
+        Type::Html if prod => html(data),
         Type::Js if prod => js(data),
         _ => Ok(data.into()),
     };
@@ -29,22 +29,21 @@ pub fn write<T: Into<Vec<u8>>>(target: &Path, file_type: Type, data: T) -> eyre:
             Ok(())
         }
         Err(err) => {
-            error!("Encountered error during minification: {:?}", err);
-            warn!("Writing original file contents to destination for debugging");
+            error!("Encountered error while minifying {:?}: {:?}", target, err);
+            error!("Writing original file contents to destination for you to debug");
             fs::write(target, orig_data)?;
             Err(err)
         }
     }
 }
 
-fn html(target: &Path, mut data: Vec<u8>) -> eyre::Result<Vec<u8>> {
+fn html(mut data: Vec<u8>) -> eyre::Result<Vec<u8>> {
     let conf = minify_html_onepass::Cfg {
         minify_css: true,
         minify_js: true,
     };
-    minify_html_onepass::with_friendly_error(data.as_mut(), &conf)
-        .map_err(|err| eyre!("{:?}: {:?}", target, err))
-        .map(|x| data[..x].to_vec())
+    let end = minify_html_onepass::with_friendly_error(data.as_mut(), &conf)?;
+    Ok(data[..end].to_vec())
 }
 
 fn js(data: Vec<u8>) -> eyre::Result<Vec<u8>> {
