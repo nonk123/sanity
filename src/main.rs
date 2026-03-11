@@ -150,14 +150,14 @@ async fn http_service(
     let _lock = build::read().await;
     let query = req.uri().path()[1..].to_string();
 
-    match _http_service(req) {
-        Ok(ok) => Ok(ok),
-        Err(err) => {
-            error!("{:?} -> {:?}", query, err);
-            let fuckyou = format!(include_str!("error.html"), query, err);
-            Ok(Response::new(Full::new(Bytes::from(fuckyou))))
-        }
-    }
+    let err = match _http_service(req) {
+        Ok(ok) => return Ok(ok),
+        Err(err) => err,
+    };
+
+    error!("{:?} -> {:?}", query, err);
+    let fuckyou = format!(include_str!("error.html"), query, err);
+    Ok(Response::new(Full::new(Bytes::from(fuckyou))))
 }
 
 fn _http_service(req: Request<Incoming>) -> eyre::Result<Response<Full<Bytes>>> {
