@@ -13,13 +13,13 @@ Here's what it does for you:
 - Minify HTML/JS/CSS resulting in the build process.
 - Leave other files alone and copy them as-is.
 
-Directories are walked recursively depth-first, with files processed and directories read in an alphanumeric order.
+Directories are walked recursively depth-first, with files processed and directories read in an alphanumeric order. Files are processed as soon as they are encountered, with the exception being Jinja2 templates, the rendering of which happens in a separate step that runs _after_ everything else has been processed.
 
 Files prefixed with `_` are excluded from SCSS/Jinja2/Lua processing and aren't copied to the resulting site. This is useful for:
 
 - Base templates that are meant to be inherited rather than rendered on their own.
-- Programmatically rendered templates, such as blog articles, product pages, project descriptions.
-- Reused template partials in their own files.
+- Templates rendered programmatically, such as blog articles, product pages, project descriptions.
+- Reused template partials residing as separate files.
 - SCSS `@use` modules.
 - Lua `require()` imports.
 
@@ -53,7 +53,7 @@ Discover more options by running `sanity` with `--help`.
 
 ## Basic Scripting
 
-There isn't much to scripting sanity besides the custom `render` function. Take a look at this static blog example:
+There isn't much to scripting sanity besides the custom `render` function. It lets you send a template to the render queue programmatically rather than forcing you to use one whole file per page. Take a look at this static blog example:
 
 ```lua
 local blog = {
@@ -76,12 +76,12 @@ end
 
 - A template name (path relative to `www`, without the `.j2` extension) to add to the _render queue_.
 - Output file path relative to `dist`.
-- A dictionary of values to supply to the renderer.
+- A dictionary to supply to the renderer.
 
-Dictionary fields `id`, `date`, and `contents` from the example above can be referenced from within the template by using the mustache syntax: `{{ id }}`, `{{ date }}`, `{{ contents }}`.
+Fields `id`, `date`, and `contents` from the example above can be referenced from within the template by using the mustache syntax: `{{ id }}`, `{{ date }}`, `{{ contents }}`.
 
 > [!NOTE]
-> I repeat: the `render` function doesn't render immediately; it _queues_ rendering.
+> I repeat: the `render` function doesn't render immediately; it _queues_ rendering. Lua scripts are processed _before_ the rendering happens.
 
 ## Advanced Scripting
 
@@ -106,7 +106,7 @@ local contents = read("blog/" .. id .. ".md");
 
 ### Adding Global Variables
 
-`inject` can be used to add/modify variables shared across all templates:
+`inject` can be used to add/modify globals available inside _all_ templates:
 
 ```lua
 inject("last_updated", os.date("%Y-%m-%d"));
