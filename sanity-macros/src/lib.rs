@@ -109,7 +109,7 @@ pub fn luafn(_attr: TokenStream, item: TokenStream) -> TokenStream {
         #visibility struct #fn_name;
 
         impl crate::lua::LuaFn for #fn_name {
-            fn call(&self, #lua_arg: #lua_type, args: mlua::MultiValue) -> color_eyre::eyre::Result<Value> {
+            fn call(&self, #lua_arg: #lua_type, args: mlua::MultiValue) -> color_eyre::eyre::Result<mlua::Value> {
                 let (#(#arg_pats),*): (#(#arg_types),*) =
                     <(#(#arg_types),*) as mlua::FromLuaMulti>::from_lua_multi(args, lua)?;
 
