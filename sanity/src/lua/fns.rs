@@ -47,7 +47,7 @@ pub fn json(lua: &Lua, path: String) -> eyre::Result<Value> {
 }
 
 /// Read a text file from `www` and return its contents as a string.
-#[luafn]
+#[luafn(returns = "string")]
 pub fn read(lua: &Lua, path: String) -> eyre::Result<String> {
     let path = paths::www()?.join(path);
     Ok(fs::read_to_string(&path)?)
@@ -56,7 +56,7 @@ pub fn read(lua: &Lua, path: String) -> eyre::Result<String> {
 /// Return a file's last-modified date as an ISO timestamp string.
 ///
 /// Useful for embedding in a `sitemap.xml`.
-#[luafn]
+#[luafn(returns = "string")]
 pub fn lastmod(lua: &Lua, path: String) -> eyre::Result<String> {
     let path = paths::www()?.join(path);
     let modif = fs::metadata(&path).and_then(|x| x.modified())?;

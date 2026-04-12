@@ -48,6 +48,7 @@ pub trait LuaFn {
     fn name(&self) -> String;
     fn docs(&self) -> Vec<String>;
     fn params(&self) -> Vec<(String, String)>;
+    fn returns(&self) -> String;
 }
 
 fn try_new_shebang() -> eyre::Result<Shebang> {
@@ -105,8 +106,7 @@ fn write_lualib_inner() -> eyre::Result<()> {
             writeln!(file, "---")?;
         }
 
-        // TODO: guess the return type also.
-        writeln!(file, "---@return any")?;
+        writeln!(file, "---@return {}", fun.returns())?;
 
         let argnames: Vec<String> = fun
             .params()
