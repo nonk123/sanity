@@ -1,6 +1,9 @@
 use proc_macro::TokenStream;
 use quote::{ToTokens, quote};
-use syn::{Expr, FnArg, ItemFn, Lit, Meta, Pat, parse_macro_input};
+use syn::{
+    Error, Expr, FnArg, ItemFn, Lit, Meta, Pat, ReturnType, parse_macro_input,
+    spanned::Spanned as _,
+};
 
 #[proc_macro_attribute]
 pub fn luafn(_attr: TokenStream, item: TokenStream) -> TokenStream {
@@ -13,8 +16,9 @@ pub fn luafn(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let fn_name_s = fn_name.to_string();
 
-    let syn::ReturnType::Type(_, output) = &input_fn.sig.output else {
-        unreachable!(); // TODO: document
+    let output = match &input_fn.sig.output {
+        ReturnType::Type(_, output) => output.into_token_stream(),
+        ReturnType::Default => quote! { () },
     };
 
     let doc_lines: Vec<String> = input_fn
@@ -47,7 +51,9 @@ pub fn luafn(_attr: TokenStream, item: TokenStream) -> TokenStream {
             };
 
             let Pat::Ident(ref pat) = *arg.pat else {
-                unreachable!(); // TODO: document
+                return Error::new(arg.span(), "Only plain arguments are supported")
+                    .to_compile_error()
+                    .into();
             };
 
             let name = pat.ident.to_string();
@@ -66,7 +72,12 @@ pub fn luafn(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let (lua_arg, lua_type) = if let Some(FnArg::Typed(arg)) = inputs.first() {
         (&arg.pat, &arg.ty)
     } else {
-        unreachable!(); // TODO: document
+        return Error::new(
+            inputs.span(),
+            "The first argument needs to be of the `&mlua::Lua` type.",
+        )
+        .to_compile_error()
+        .into();
     };
 
     let arg_pats: Vec<_> = inputs
