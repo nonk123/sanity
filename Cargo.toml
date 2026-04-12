@@ -3,11 +3,7 @@ name = "sanity"
 version = "0.2.0"
 edition = "2024"
 
-[features]
-default = []
-
 [dependencies]
-
 clap = { version = "4.6.0", features = ["derive"] }
 color-eyre = "0.6.5"
 grass = "0.13.4"
