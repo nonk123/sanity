@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::{ToTokens, quote};
-use syn::{Expr, FnArg, ItemFn, Lit, Meta, parse_macro_input};
+use syn::{Expr, FnArg, ItemFn, Lit, Meta, Pat, parse_macro_input};
 
 #[proc_macro_attribute]
 pub fn luafn(_attr: TokenStream, item: TokenStream) -> TokenStream {
@@ -38,19 +38,28 @@ pub fn luafn(_attr: TokenStream, item: TokenStream) -> TokenStream {
         })
         .collect();
 
-    let param_types: Vec<String> = inputs
+    let params: Vec<_> = inputs
         .iter()
+        .skip(1)
         .filter_map(|arg| {
             let FnArg::Typed(arg) = arg else {
                 return None;
             };
+
+            let Pat::Ident(ref pat) = *arg.pat else {
+                unreachable!(); // TODO: document
+            };
+
+            let name = pat.ident.to_string();
 
             let ty = match arg.ty.to_token_stream().to_string().as_str() {
                 "String" => "string",
                 _ => "any",
             };
 
-            Some(ty.to_string())
+            Some(quote! {
+                (#name.to_string(), #ty.to_string())
+            })
         })
         .collect();
 
@@ -105,8 +114,8 @@ pub fn luafn(_attr: TokenStream, item: TokenStream) -> TokenStream {
                 vec![#(#doc_lines.to_string()),*]
             }
 
-            fn params(&self) -> Vec<String> {
-                vec![#(#param_types.to_string()),*]
+            fn params(&self) -> Vec<(String, String)> {
+                vec![#(#params),*]
             }
         }
     };

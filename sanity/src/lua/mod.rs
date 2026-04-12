@@ -1,13 +1,13 @@
 use std::{
     collections::HashMap,
     fs::File,
+    io::Write,
     path::{Path, PathBuf},
 };
 
-use chrono::{DateTime, Utc};
 use color_eyre::eyre::{self, eyre};
 use minijinja::Value as JValue;
-use mlua::{FromLua, FromLuaMulti, IntoLua, Lua, Value};
+use mlua::{IntoLua, Lua, Value};
 
 use crate::paths;
 
@@ -47,7 +47,7 @@ pub trait LuaFn {
     fn call(&self, lua: &mlua::Lua, args: mlua::MultiValue) -> eyre::Result<Value>;
     fn name(&self) -> String;
     fn docs(&self) -> Vec<String>;
-    fn params(&self) -> Vec<String>;
+    fn params(&self) -> Vec<(String, String)>;
 }
 
 fn try_new_shebang() -> eyre::Result<Shebang> {
@@ -86,9 +86,35 @@ pub fn write_lualib() {
 }
 
 fn write_lualib_inner() -> eyre::Result<()> {
-    let file = File::create(paths::root()?.join("_sanity.lua"))?;
+    let mut file = File::create(paths::root()?.join("_sanity.lua"))?;
 
-    for fun in fns::all() {}
+    writeln!(file, "---@meta")?;
+    writeln!(file)?;
+
+    for fun in fns::all() {
+        for line in fun.docs() {
+            writeln!(file, "---{line}")?;
+        }
+        writeln!(file, "---")?;
+
+        for (name, ty) in fun.params() {
+            writeln!(file, "---@param {name} {ty}")?;
+        }
+        if !fun.params().is_empty() {
+            writeln!(file, "---")?;
+        }
+
+        // TODO: guess the return type also.
+        writeln!(file, "---@return any")?;
+
+        let argnames: Vec<String> = fun
+            .params()
+            .into_iter()
+            .map(|(n, _)| n.to_string())
+            .collect();
+        writeln!(file, "function {}({}) end", fun.name(), argnames.join(", "))?;
+        writeln!(file)?;
+    }
 
     Ok(())
 }
