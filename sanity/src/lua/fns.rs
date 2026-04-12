@@ -53,7 +53,7 @@ pub fn read(lua: &Lua, path: String) -> eyre::Result<String> {
     Ok(fs::read_to_string(&path)?)
 }
 
-/// Return a file's last-modified date as an ISO timestamp string.
+/// Return a file's last-modified date in UTC as an ISO timestamp string.
 ///
 /// Useful for embedding in a `sitemap.xml`.
 #[luafn(returns = "string")]
