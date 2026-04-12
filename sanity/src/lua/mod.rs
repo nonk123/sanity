@@ -89,9 +89,10 @@ fn write_lualib_inner() -> eyre::Result<()> {
     let mut file = File::create(paths::root()?.join("_sanity.lua"))?;
 
     writeln!(file, "---@meta")?;
-    writeln!(file)?;
 
     for fun in fns::all() {
+        writeln!(file)?;
+
         for line in fun.docs() {
             writeln!(file, "---{line}")?;
         }
@@ -113,7 +114,6 @@ fn write_lualib_inner() -> eyre::Result<()> {
             .map(|(n, _)| n.to_string())
             .collect();
         writeln!(file, "function {}({}) end", fun.name(), argnames.join(", "))?;
-        writeln!(file)?;
     }
 
     Ok(())
