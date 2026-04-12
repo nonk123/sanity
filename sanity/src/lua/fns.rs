@@ -67,9 +67,7 @@ pub fn lastmod(lua: &Lua, path: String) -> eyre::Result<String> {
 /// Add a global variable that can be referenced from templates.
 #[luafn]
 pub fn inject(lua: &Lua, name: String, value: Value) -> eyre::Result<Value> {
-    lua.app_data_mut::<State>()
-        .unwrap()
-        .global_context
-        .insert(name, JValue::from_serialize(value));
+    let ctx = &mut lua.app_data_mut::<State>().unwrap().global_context;
+    ctx.insert(name, JValue::from_serialize(value));
     Ok(Value::Nil)
 }
