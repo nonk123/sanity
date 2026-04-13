@@ -18,7 +18,7 @@
     <p>Also invited are:</p>
     <ul>
         {% for guest in guests %}
-        <li>{{ guest }}</li>
+        <li><a href="/{{ guest }}.html">{{ guest }}</a></li>
         {% endfor %}
     </ul>
     <p>We're looking forward to seeing you all!</p>
