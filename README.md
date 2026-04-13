@@ -3,7 +3,7 @@
 > [!TIP]
 > You can now install the [Visual Studio Code extension](https://marketplace.visualstudio.com/items?itemName=nonk123.vscode-sanity-liveserver) for a more pleasant experience! See other supported IDEs in [the integrations section](#integrations)!
 
-The only sane static site generator in existence. Refer to the [examples directory](examples) for a quickstart.
+The only sane static site generator in existence. Refer to the [examples directory](sanity/examples) for a quickstart.
 
 Here's what it does for you:
 
