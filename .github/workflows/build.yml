@@ -45,7 +45,7 @@ jobs:
       - name: Rename binary artifact
         run: cp target/release/sanity${{ matrix.bin-ext }} ${{ env.OUTPATH }}
       - name: Release binary
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: ${{ env.OUTPATH }}
           draft: ${{ github.ref_name != 'gh-actions' }}
