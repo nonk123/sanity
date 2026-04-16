@@ -36,7 +36,7 @@ pub async fn run() -> eyre::Result<()> {
         }
         Err(report) => {
             error!("Build failed: {:?}", report);
-            Err(eyre!("See the list of error above"))
+            Err(eyre!("See the list of errors above"))
         }
     };
 
