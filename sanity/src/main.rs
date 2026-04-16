@@ -5,6 +5,7 @@ use std::{
     collections::HashSet,
     convert::Infallible,
     net::SocketAddr,
+    process::ExitCode,
     sync::{OnceLock, mpsc},
     time::Duration,
 };
@@ -88,7 +89,14 @@ pub enum Commands {
 }
 
 #[tokio::main]
-async fn main() -> eyre::Result<()> {
+async fn main() -> ExitCode {
+    match realmain().await {
+        Ok(code) => code,
+        Err(_) => ExitCode::FAILURE,
+    }
+}
+
+async fn realmain() -> eyre::Result<ExitCode> {
     let _ = color_eyre::install();
 
     pretty_env_logger::formatted_builder()
@@ -98,7 +106,11 @@ async fn main() -> eyre::Result<()> {
     ARGS.set(Args::parse()).unwrap();
     match args().command() {
         Commands::Build => {
-            return build::run().await;
+            return Ok(if build::run().await.is_ok() {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::FAILURE
+            });
         }
         Commands::Clean => {
             build::nuke();
@@ -116,7 +128,7 @@ async fn main() -> eyre::Result<()> {
         }
     };
 
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }
 
 async fn run_server(port: u16) -> eyre::Result<()> {
