@@ -106,11 +106,9 @@ async fn realmain() -> eyre::Result<ExitCode> {
     ARGS.set(Args::parse()).unwrap();
     match args().command() {
         Commands::Build => {
-            return Ok(if build::run().await.is_ok() {
-                ExitCode::SUCCESS
-            } else {
-                ExitCode::FAILURE
-            });
+            if build::run().await.is_err() {
+                return Ok(ExitCode::FAILURE);
+            }
         }
         Commands::Clean => {
             build::nuke();
