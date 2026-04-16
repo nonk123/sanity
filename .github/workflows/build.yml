@@ -2,7 +2,7 @@ name: Build and release for major platforms
 
 on:
   push:
-    tags: [gh-actions, v*]
+    tags: [v*]
 
 concurrency:
   cancel-in-progress: true
@@ -48,4 +48,4 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           files: ${{ env.OUTPATH }}
-          draft: ${{ github.ref_name != 'gh-actions' }}
+          draft: true
