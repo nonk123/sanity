@@ -30,19 +30,15 @@ pub async fn run() -> eyre::Result<()> {
     };
 
     let result = match result {
+        Err(_) => Err(eyre!("")),
         Ok(()) => {
             info!("Site built!");
             Ok(())
         }
-        Err(report) => {
-            error!("Build failed: {:?}", report);
-            Err(eyre!("See the list of errors above"))
-        }
     };
 
     if let Some(start) = start {
-        let end = Instant::now();
-        let duration = end.duration_since(start);
+        let duration = Instant::now().duration_since(start);
         info!("Took {}ms", duration.as_millis());
     }
 
