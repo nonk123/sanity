@@ -98,7 +98,7 @@ async fn main() -> eyre::Result<()> {
     ARGS.set(Args::parse()).unwrap();
     match args().command() {
         Commands::Build => {
-            build::run().await;
+            return build::run().await;
         }
         Commands::Clean => {
             build::nuke();
@@ -147,7 +147,7 @@ async fn run_server(port: u16) -> eyre::Result<()> {
 async fn http_service(
     req: Request<Incoming>,
 ) -> core::result::Result<Response<Full<Bytes>>, Infallible> {
-    let _lock = build::read().await;
+    let _lock = build::lock().await;
     let query = req.uri().path()[1..].to_string();
 
     let err = match _http_service(req) {
@@ -198,6 +198,7 @@ async fn process_events(events: Vec<DebouncedEvent>) -> eyre::Result<()> {
         if !matches!(event.kind, EventKind::Remove(_) | EventKind::Modify(_)) {
             continue;
         }
+
         for path in &event.paths {
             let path = path.strip_prefix(paths::www()?)?;
             let path = paths::dist()?.join(path);
@@ -208,11 +209,13 @@ async fn process_events(events: Vec<DebouncedEvent>) -> eyre::Result<()> {
     }
 
     let redo = !targets.is_empty();
+
     for path in targets {
         let _ = std::fs::remove_file(path);
     }
+
     if redo {
-        build::run().await;
+        let _ = build::run().await;
     }
 
     Ok(())
@@ -222,7 +225,7 @@ async fn watch() -> eyre::Result<()> {
     let (tx, rx) = mpsc::channel();
     let mut debouncer = new_debouncer(DEBOUNCE_TIMEOUT, None, tx)?;
 
-    build::run().await;
+    let _ = build::run().await;
     debouncer.watch(&paths::www()?, RecursiveMode::Recursive)?;
     info!("Watching {:?}", paths::www()?);
 

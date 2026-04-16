@@ -13,11 +13,11 @@ use crate::{fs::PathExt, jinja2::JinjaEnvironment, lua::Shebang as LuaShebang, m
 
 static BUILD: RwLock<()> = RwLock::const_new(());
 
-pub async fn read() -> RwLockReadGuard<'static, ()> {
+pub async fn lock() -> RwLockReadGuard<'static, ()> {
     BUILD.read().await
 }
 
-pub async fn run() {
+pub async fn run() -> eyre::Result<()> {
     let start = if crate::args().profile_build_times {
         Some(Instant::now())
     } else {
@@ -29,16 +29,24 @@ pub async fn run() {
         run_inner()
     };
 
-    match result {
-        Ok(()) => info!("Site built!"),
-        Err(report) => error!("Build failed: {:?}", report),
-    }
+    let result = match result {
+        Ok(()) => {
+            info!("Site built!");
+            Ok(())
+        }
+        Err(report) => {
+            error!("Build failed: {:?}", report);
+            Err(eyre!("See the list of error above"))
+        }
+    };
 
     if let Some(start) = start {
         let end = Instant::now();
         let duration = end.duration_since(start);
         info!("Took {}ms", duration.as_millis());
     }
+
+    result
 }
 
 fn run_inner() -> eyre::Result<()> {
