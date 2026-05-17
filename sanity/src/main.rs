@@ -99,11 +99,12 @@ async fn main() -> ExitCode {
 async fn realmain() -> eyre::Result<ExitCode> {
     let _ = color_eyre::install();
 
-    pretty_env_logger::formatted_builder()
+    env_logger::builder()
         .filter_level(LevelFilter::Info)
         .try_init()?;
 
     ARGS.set(Args::parse()).unwrap();
+
     match args().command() {
         Commands::Build => {
             if build::run().await.is_err() {
