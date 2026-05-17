@@ -1,26 +1,12 @@
 use proc_macro::TokenStream;
 use quote::{ToTokens, quote};
 use syn::{
-    Error, Expr, FnArg, ItemFn, Lit, LitStr, Meta, Pat, ReturnType, parse_macro_input,
+    Error, Expr, FnArg, ItemFn, Lit, Meta, Pat, ReturnType, parse_macro_input,
     spanned::Spanned as _,
 };
 
 #[proc_macro_attribute]
-pub fn luafn(args: TokenStream, item: TokenStream) -> TokenStream {
-    let mut lua_returns: Option<String> = Some(String::from("any"));
-
-    let parser = syn::meta::parser(|meta| {
-        if meta.path.is_ident("returns") {
-            lua_returns = Some(LitStr::value(&meta.value()?.parse()?));
-        } else {
-            return Err(meta.error("Unsupported property"));
-        }
-
-        Ok(())
-    });
-
-    parse_macro_input!(args with parser);
-
+pub fn luafn(_: TokenStream, item: TokenStream) -> TokenStream {
     let input_fn = parse_macro_input!(item as ItemFn);
 
     let fn_name = &input_fn.sig.ident;
@@ -144,7 +130,7 @@ pub fn luafn(args: TokenStream, item: TokenStream) -> TokenStream {
             }
 
             fn returns(&self) -> String {
-                #lua_returns.to_string()
+                <#output as crate::lua::LuaFnReturn>::typename()
             }
         }
     };

@@ -51,6 +51,28 @@ pub trait LuaFn {
     fn returns(&self) -> String;
 }
 
+pub trait LuaFnReturn {
+    fn typename() -> String;
+}
+
+impl LuaFnReturn for mlua::Value {
+    fn typename() -> String {
+        String::from("any")
+    }
+}
+
+impl LuaFnReturn for String {
+    fn typename() -> String {
+        String::from("string")
+    }
+}
+
+impl<T: LuaFnReturn, E> LuaFnReturn for Result<T, E> {
+    fn typename() -> String {
+        <T as LuaFnReturn>::typename()
+    }
+}
+
 fn try_new_shebang() -> eyre::Result<Shebang> {
     let lua = Lua::new();
 
