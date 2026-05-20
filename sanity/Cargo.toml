@@ -3,11 +3,6 @@ name = "sanity"
 version = "0.3.3"
 edition = "2024"
 
-[profile.release]
-opt-level = "s"
-strip = true
-lto = true
-
 [dependencies]
 sanity-macros = { path = "../sanity-macros" }
 
