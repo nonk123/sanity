@@ -30,7 +30,10 @@ pub async fn run() -> eyre::Result<()> {
     };
 
     let result = match result {
-        Err(_) => Err(eyre!("")),
+        Err(err) => {
+            error!("{}", err);
+            Err(err)
+        }
         Ok(()) => {
             info!("Site built!");
             Ok(())

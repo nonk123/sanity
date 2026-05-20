@@ -233,10 +233,11 @@ async fn process_events(events: Vec<DebouncedEvent>) -> eyre::Result<()> {
 }
 
 async fn watch() -> eyre::Result<()> {
+    let _ = build::run().await;
+
     let (tx, rx) = mpsc::channel();
     let mut debouncer = new_debouncer(DEBOUNCE_TIMEOUT, None, tx)?;
 
-    let _ = build::run().await;
     debouncer.watch(&paths::www()?, RecursiveMode::Recursive)?;
     info!("Watching {:?}", paths::www()?);
 
