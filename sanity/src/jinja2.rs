@@ -35,7 +35,7 @@ impl JinjaEnvironment {
         base
     }
 
-    pub fn register(&mut self, path: &Path) -> eyre::Result<()> {
+    pub fn register(&self, path: &Path) -> eyre::Result<()> {
         let name = path.template_name()?;
         let source = fs::read_to_string(path)?;
         self.templates.lock().unwrap().insert(name, source);

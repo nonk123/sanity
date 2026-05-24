@@ -2,7 +2,7 @@ use std::{
     collections::HashSet,
     fs,
     path::{Path, PathBuf},
-    sync::{Mutex, MutexGuard},
+    sync::Mutex,
     time::Instant,
 };
 
@@ -96,28 +96,17 @@ fn nuke_inner() -> eyre::Result<()> {
     Ok(())
 }
 
-struct StateInner {
-    processed_items: HashSet<PathBuf>,
+struct State {
+    lua: Mutex<LuaShebang>,
     jinja: JinjaEnvironment,
-    lua: LuaShebang,
 }
-
-struct State(Mutex<StateInner>);
 
 impl State {
     fn try_new() -> eyre::Result<Self> {
-        Ok(Self(Mutex::new(StateInner {
-            lua: LuaShebang::try_new()?,
-            processed_items: HashSet::new(),
+        Ok(Self {
+            lua: Mutex::new(LuaShebang::try_new()?),
             jinja: JinjaEnvironment::new(),
-        })))
-    }
-
-    fn lock(&'_ self) -> eyre::Result<MutexGuard<'_, StateInner>> {
-        match self.0.lock() {
-            Ok(lock) => Ok(lock),
-            Err(_) => Err(eyre!("damn it")),
-        }
+        })
     }
 
     fn walk(&self, branch: &Path) -> eyre::Result<()> {
@@ -126,10 +115,7 @@ impl State {
         if branch.is_dir() {
             let _ = fs::create_dir_all(dest);
             self.process_dir(branch)
-        } else if self.lock()?.processed_items.contains(branch) {
-            Ok(())
         } else {
-            self.lock()?.processed_items.insert(branch.to_path_buf());
             self.process_file(branch, dest)
         }
     }
@@ -152,7 +138,7 @@ impl State {
 
         match ext {
             Some("j2") => {
-                self.lock()?.jinja.register(branch)?;
+                self.jinja.register(branch)?;
             }
             Some("scss") if !underscored => {
                 let opts = grass::Options::default().load_path(paths::www()?);
@@ -160,9 +146,10 @@ impl State {
                 dest.set_extension("css");
                 fs::write(dest, data)?;
             }
-            Some("lua") if !underscored => {
-                self.lock()?.lua.process(branch)?;
-            }
+            Some("lua") if !underscored => match self.lua.lock() {
+                Ok(lua) => lua.process(branch)?,
+                Err(_) => return Err(eyre!("damn it")),
+            },
             Some("js") if !recent => {
                 let data = fs::read(&branch)?;
                 minify::write(&dest, minify::Type::Js, data)?;
@@ -181,10 +168,12 @@ impl State {
     }
 
     fn finalize(self) -> eyre::Result<()> {
-        let StateInner { jinja, lua, .. } = self.0.into_inner()?;
+        let names: HashSet<_> = self.jinja.all();
 
-        let names: HashSet<_> = jinja.all();
-        let lua = lua.state();
+        let lua = match self.lua.lock() {
+            Ok(lua) => lua.state(),
+            Err(_) => return Err(eyre!("damn it")),
+        };
 
         let globals = minijinja::Value::from_serialize(&lua.global_context);
         let merge = |x: &minijinja::Value| merge_maps([globals.clone(), x.clone()]);
@@ -194,7 +183,7 @@ impl State {
 
             if !target.is_underscored() {
                 let ctx = merge(&context! {});
-                jinja.render(&name, &target, &ctx)?;
+                self.jinja.render(&name, &target, &ctx)?;
             }
 
             eyre::Result::<()>::Ok(())
@@ -202,7 +191,7 @@ impl State {
 
         lua.render_queue.par_iter().try_for_each(|r| {
             let ctx = merge(&r.context);
-            jinja.render(&r.template, &r.target, &ctx)
+            self.jinja.render(&r.template, &r.target, &ctx)
         })?;
 
         Ok(())
