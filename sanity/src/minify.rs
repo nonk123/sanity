@@ -7,6 +7,8 @@ use oxc_minifier::{Minifier, MinifierOptions};
 use oxc_parser::Parser;
 use oxc_span::SourceType;
 
+use crate::paths::PathExt as _;
+
 pub enum Type {
     Html,
     Js,
@@ -26,7 +28,7 @@ pub fn write(target: &Path, file_type: Type, data: impl Into<Vec<u8>>) -> eyre::
     match minified {
         Ok(data) => Ok(fs::write(target, data)?),
         Err(err) => {
-            error!("minify {}: {:?}", target.display(), err);
+            error!("minify {}: {:?}", target.display_simple(), err);
             warn!("Writing original file contents to destination for you to debug");
             let _ = fs::write(target, orig_data);
             Err(err)

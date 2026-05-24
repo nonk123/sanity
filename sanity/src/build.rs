@@ -9,7 +9,13 @@ use color_eyre::eyre::{self, eyre};
 use minijinja::{context, value::merge_maps};
 use tokio::sync::{RwLock, RwLockReadGuard};
 
-use crate::{fs::PathExt, jinja2::JinjaEnvironment, lua::Shebang as LuaShebang, minify, paths};
+use crate::{
+    fs::PathExt,
+    jinja2::JinjaEnvironment,
+    lua::Shebang as LuaShebang,
+    minify,
+    paths::{self, PathExt as _},
+};
 
 static BUILD: RwLock<()> = RwLock::const_new(());
 
@@ -52,7 +58,7 @@ fn run_inner() -> eyre::Result<()> {
     if !paths::www()?.exists() {
         return Err(eyre!(
             "Please create and populate the www directory: {}",
-            paths::www()?.display()
+            paths::www()?.display_simple()
         ));
     }
 

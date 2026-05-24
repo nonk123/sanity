@@ -28,7 +28,7 @@ use notify_debouncer_full::{
 };
 use tokio::net::TcpListener;
 
-use crate::fs::PathExt;
+use crate::{fs::PathExt, paths::PathExt as _};
 
 mod build;
 mod fs;
@@ -178,7 +178,7 @@ fn _http_service(req: Request<Incoming>) -> eyre::Result<Response<Full<Bytes>>> 
     if !out_path.exists() {
         return Err(eyre!(
             "File or directory doesn't exist: {}",
-            out_path.display()
+            &out_path.display_simple()
         ));
     }
 
@@ -187,7 +187,7 @@ fn _http_service(req: Request<Incoming>) -> eyre::Result<Response<Full<Bytes>>> 
     }
 
     if !out_path.exists() {
-        return Err(eyre!("File doesn't exist: {}", out_path.display()));
+        return Err(eyre!("File doesn't exist: {}", out_path.display_simple()));
     }
 
     let data = std::fs::read(out_path.clone())?;
@@ -242,7 +242,7 @@ async fn watch() -> eyre::Result<()> {
     let mut debouncer = new_debouncer(DEBOUNCE_TIMEOUT, None, tx)?;
 
     debouncer.watch(&paths::www()?, RecursiveMode::Recursive)?;
-    info!("Watching {}", paths::www()?.display());
+    info!("Watching {}", paths::www()?.display_simple());
 
     for result in rx {
         match result {
