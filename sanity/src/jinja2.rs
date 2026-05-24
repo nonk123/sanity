@@ -2,7 +2,7 @@ use std::{
     collections::{HashMap, HashSet},
     fs,
     path::Path,
-    sync::{Arc, Mutex, Weak},
+    sync::RwLock,
 };
 
 use color_eyre::eyre::{self, eyre};
@@ -11,39 +11,35 @@ use minijinja::{Environment, Error, ErrorKind, context, value::merge_maps};
 use crate::{fs::PathExt, minify};
 
 pub struct JinjaEnvironment {
-    templates: Arc<Mutex<HashMap<String, String>>>,
-    base: Environment<'static>,
+    templates: RwLock<HashMap<String, String>>,
 }
 
 impl JinjaEnvironment {
     pub fn new() -> Self {
-        let templates = Arc::new(Mutex::new(HashMap::new()));
-        let base = Self::make_env(Arc::downgrade(&templates));
-        Self { templates, base }
+        Self {
+            templates: RwLock::new(HashMap::new()),
+        }
     }
 
-    fn make_env(templates: Weak<Mutex<HashMap<String, String>>>) -> Environment<'static> {
+    fn make_env(templates: HashMap<String, String>) -> Environment<'static> {
         let mut base = Environment::new();
+
         base.add_filter("required", required_filter);
-        base.set_loader(move |name| {
-            if let Some(templates) = templates.upgrade() {
-                Ok(templates.lock().unwrap().get(name).map(String::to_string))
-            } else {
-                Ok(None)
-            }
-        });
+
+        base.set_loader(move |name| Ok(templates.get(name).map(String::to_string)));
+
         base
     }
 
     pub fn register(&self, path: &Path) -> eyre::Result<()> {
         let name = path.template_name()?;
         let source = fs::read_to_string(path)?;
-        self.templates.lock().unwrap().insert(name, source);
+        self.templates.write().unwrap().insert(name, source);
         Ok(())
     }
 
     pub fn all(&self) -> HashSet<String> {
-        let templates = self.templates.lock().unwrap();
+        let templates = self.templates.read().unwrap();
         templates.keys().map(String::to_string).collect()
     }
 
@@ -63,7 +59,10 @@ impl JinjaEnvironment {
             context.clone(),
         ]);
 
-        let data = self.base.get_template(name)?.render(context)?;
+        let templates = self.templates.read().unwrap().to_owned();
+        let base = Self::make_env(templates);
+
+        let data = base.get_template(name)?.render(context)?;
 
         if let Some("html") = target.extension_str() {
             minify::write(&target, minify::Type::Html, data)?;

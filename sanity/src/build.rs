@@ -189,9 +189,9 @@ impl State {
             eyre::Result::<()>::Ok(())
         })?;
 
-        lua.render_queue.par_iter().try_for_each(|r| {
-            let ctx = merge(&r.context);
-            self.jinja.render(&r.template, &r.target, &ctx)
+        lua.render_queue.par_iter().try_for_each(|item| {
+            let ctx = merge(&item.context);
+            self.jinja.render(&item.template, &item.target, &ctx)
         })?;
 
         Ok(())
