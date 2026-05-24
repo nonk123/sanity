@@ -25,7 +25,7 @@ pub fn all() -> Vec<Box<dyn LuaFn + Send>> {
 /// Queue a template to be rendered to outpath.
 #[luafn]
 pub fn render(lua: &Lua, template: String, target: String, context: Value) -> eyre::Result<Value> {
-    trace!("lua render: {:?} {:?} => {:?}", template, target, context);
+    trace!("lua render: {} {} => {:?}", template, target, context);
 
     let mut state = lua.app_data_mut::<State>().unwrap();
     state.render_queue.push(Render {

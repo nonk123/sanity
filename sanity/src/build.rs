@@ -51,8 +51,8 @@ pub async fn run() -> eyre::Result<()> {
 fn run_inner() -> eyre::Result<()> {
     if !paths::www()?.exists() {
         return Err(eyre!(
-            "Please create and populate the www directory: {:?}",
-            paths::www()?
+            "Please create and populate the www directory: {}",
+            paths::www()?.display()
         ));
     }
 

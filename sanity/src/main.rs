@@ -139,7 +139,7 @@ async fn run_server(port: u16) -> eyre::Result<()> {
         let (stream, addr) = listener.accept().await?;
 
         if !addr.ip().is_loopback() {
-            warn!("We don't tolerate outsiders here: {:?}", addr);
+            warn!("We don't tolerate outsiders here: {}", addr);
             continue;
         }
 
@@ -176,7 +176,10 @@ fn _http_service(req: Request<Incoming>) -> eyre::Result<Response<Full<Bytes>>> 
     let mut out_path = paths::dist()?.join(in_path);
 
     if !out_path.exists() {
-        return Err(eyre!("File or directory doesn't exist: {:?}", out_path));
+        return Err(eyre!(
+            "File or directory doesn't exist: {}",
+            out_path.display()
+        ));
     }
 
     if out_path.is_dir() {
@@ -184,7 +187,7 @@ fn _http_service(req: Request<Incoming>) -> eyre::Result<Response<Full<Bytes>>> 
     }
 
     if !out_path.exists() {
-        return Err(eyre!("File doesn't exist: {:?}", out_path));
+        return Err(eyre!("File doesn't exist: {}", out_path.display()));
     }
 
     let data = std::fs::read(out_path.clone())?;
@@ -239,7 +242,7 @@ async fn watch() -> eyre::Result<()> {
     let mut debouncer = new_debouncer(DEBOUNCE_TIMEOUT, None, tx)?;
 
     debouncer.watch(&paths::www()?, RecursiveMode::Recursive)?;
-    info!("Watching {:?}", paths::www()?);
+    info!("Watching {}", paths::www()?.display());
 
     for result in rx {
         match result {
