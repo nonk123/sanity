@@ -2102,6 +2102,7 @@ dependencies = [
  "oxc_minifier",
  "oxc_parser",
  "oxc_span",
+ "rayon",
  "sanity-macros",
  "serde",
  "serde_json",
