@@ -1,15 +1,21 @@
 # sanity
 
+[scss]: https://sass-lang.com/documentation/syntax
+[jinja]: https://jinja.palletsprojects.com/en/stable/templates
+[lua]: #basic-scripting
+
+[vscode-ext]: https://marketplace.visualstudio.com/items?itemName=nonk123.vscode-sanity-liveserver
+
 > [!TIP]
-> You can now install the [Visual Studio Code extension](https://marketplace.visualstudio.com/items?itemName=nonk123.vscode-sanity-liveserver) for a more pleasant experience! See other supported IDEs in [the integrations section](#integrations)!
+> You can now install the [Visual Studio Code extension][vscode-ext] for a more pleasant experience! See other supported IDEs in [the integrations section](#integrations)!
 
 The only sane static site generator in existence. Refer to the [examples directory](sanity/examples) for a quickstart.
 
 Here's what it does for you:
 
-- Process [SCSS](https://sass-lang.com/documentation/syntax) to CSS using [grass](https://github.com/connorskees/grass).
-- Render [Jinja2](https://jinja.palletsprojects.com/en/stable/templates) templates with [minijinja](https://github.com/mitsuhiko/minijinja).
-- Run [Lua scripts](#basic-scripting) with [mlua](https://github.com/mlua-rs/mlua), using [LuaJIT](https://luajit.org/) for the backend. Useful for rendering a template with different sets of inputs.
+- Process [SCSS][scss] to CSS using [grass](https://github.com/connorskees/grass).
+- Render [Jinja2][jinja] templates with [minijinja](https://github.com/mitsuhiko/minijinja).
+- Run [Lua scripts][lua] with [mlua](https://github.com/mlua-rs/mlua), using [LuaJIT](https://luajit.org/) for the backend. Useful for rendering a template with different sets of inputs.
 - Minify HTML/JS/CSS resulting in the build process.
 - Leave other files alone and copy them as-is.
 
@@ -41,9 +47,9 @@ You can use `sanity` without ever touching the command-line by installing one of
 > [!NOTE]
 > Make sure to add the `dist` folder to your `.gitignore`. It doesn't (usually) make sense to version auto-generated files.
 
-Place your Jinja2 templates, SCSS sheets, and [Lua scripts](#basic-scripting) inside the `www` folder. Run sanity from [the command line](#command-line-usage) or through [one of the integration packages](#integrations). You should get a fully processed site inside the `dist` folder right next to `www`.
+Place your [Jinja2 templates][jinja], [SCSS sheets][scss], and [Lua scripts][lua] inside the `www` folder. Run sanity from [the command line](#command-line-usage) or through [one of the integration packages](#integrations). You should get a fully processed site inside the `dist` folder right next to `www`.
 
-You can either upload the contents of `dist` to a free website-hosting such as [Neocities](https://neocities.org) or [GitHub Pages](https://pages.github.com), or you can serve them locally using the built-in `sanity` live-server before pushing the site to production. The details of the latter scenario depend on the integration you're using. If you're unsure, just use [VSCode](https://code.visualstudio.com) and [our integration](https://github.com/nonk123/vscode-sanity): this combo runs the live-server automatically once you open your project folder.
+You can either upload the contents of `dist` to a free website-hosting such as [Neocities](https://neocities.org) or [GitHub Pages](https://pages.github.com), or you can serve them locally using the built-in `sanity` live-server before pushing the site to production. The details of the latter scenario depend on the integration you're using. If you're unsure, just use [VSCode](https://code.visualstudio.com) and [our integration][vscode-ext]: this combo runs the live-server automatically once you open your project's folder.
 
 ## Command-Line Usage
 
