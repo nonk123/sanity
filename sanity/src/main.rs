@@ -192,11 +192,13 @@ fn _http_service(req: Request<Incoming>) -> eyre::Result<Response<Full<Bytes>>> 
 
     let data = std::fs::read(out_path.clone())?;
     let mut res = Response::new(Full::new(Bytes::from(data)));
+
     if let Some(x) = match out_path.extension_str() {
         Some("html") => Some("text/html"),
         Some("css") => Some("text/css"),
         Some("js") => Some("text/javascript"),
         Some("svg") => Some("image/svg+xml"),
+        Some("wasm") => Some("application/wasm"),
         _ => None,
     } {
         res.headers_mut().insert(CONTENT_TYPE, x.parse()?);
