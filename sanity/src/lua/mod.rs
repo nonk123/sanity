@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use color_eyre::eyre::{self, eyre};
+use color_eyre::eyre;
 use minijinja::Value as JValue;
 use mlua::{IntoLua, Lua, Value};
 
@@ -29,7 +29,14 @@ impl Shebang {
     }
 
     pub fn process(&self, file: &Path) -> eyre::Result<()> {
-        self.lua.load(file).exec()?;
+        let contents = format!(
+            r#"_G.__sanity_file = ...
+            {}"#,
+            String::from_utf8(std::fs::read(file)?)?
+        );
+
+        let args = (file.to_string_lossy(),);
+        self.lua.load(contents).call::<()>(args)?;
         Ok(())
     }
 
@@ -84,13 +91,16 @@ fn try_new_shebang() -> eyre::Result<Shebang> {
     for fun in fns::all() {
         let name = fun.name();
 
-        let cls = move |lua: &Lua, args| match fun
-            .call(lua, args)
-            .and_then(|x| x.into_lua(lua).map_err(|err| eyre!("{:?}", err)))
-        {
-            Ok(v) => Ok(v),
+        let cls = move |lua: &Lua, args| match fun.call(lua, args) {
+            Ok(v) => Ok(v.into_lua(lua)?),
             Err(err) => {
-                error!("Lua error: {:?}", err);
+                error!(
+                    "in {} (function `{}`) error: {:?}",
+                    lua.globals().get::<String>("__sanity_file")?,
+                    fun.name(),
+                    err.root_cause()
+                );
+
                 Ok(Value::Nil)
             }
         };
