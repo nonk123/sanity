@@ -5,6 +5,7 @@ use std::{
     collections::HashSet,
     convert::Infallible,
     net::SocketAddr,
+    path::Path,
     process::ExitCode,
     sync::{OnceLock, mpsc},
     time::Duration,
@@ -172,22 +173,25 @@ async fn http_service(
 }
 
 fn _http_service(req: Request<Incoming>) -> eyre::Result<Response<Full<Bytes>>> {
-    let in_path = req.uri().path()[1..].to_string();
-    let mut out_path = paths::dist()?.join(in_path);
+    let mut out_path = {
+        let in_path = req.uri().path()[1..].to_string();
+        paths::dist()?.join(in_path)
+    };
 
-    if !out_path.exists() {
-        return Err(eyre!(
-            "File or directory doesn't exist: {}",
-            &out_path.display_simple()
-        ));
-    }
+    let can_serve = |path: &Path| path.exists() && path.is_file();
 
-    if out_path.is_dir() {
-        out_path = out_path.join("index.html")
-    }
+    if !can_serve(&out_path) {
+        out_path.add_extension("html");
 
-    if !out_path.exists() {
-        return Err(eyre!("File doesn't exist: {}", out_path.display_simple()));
+        if !can_serve(&out_path) {
+            // just try a directory with index.html inside
+            out_path.set_extension("");
+            out_path.push("index.html");
+
+            if !can_serve(&out_path) {
+                return Err(eyre!("Path doesn't exist: {}", &out_path.display_simple()));
+            }
+        }
     }
 
     let data = std::fs::read(out_path.clone())?;
