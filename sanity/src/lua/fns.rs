@@ -22,7 +22,7 @@ pub fn all() -> Vec<Box<dyn LuaFn + Send>> {
     ]
 }
 
-/// Queue a template to be rendered to outpath.
+/// Queues a template to be rendered into dist.
 #[luafn]
 pub fn render(lua: &Lua, template: String, target: String, context: Value) -> eyre::Result<Value> {
     trace!("lua render: {} {} => {:?}", template, target, context);
@@ -37,7 +37,7 @@ pub fn render(lua: &Lua, template: String, target: String, context: Value) -> ey
     Ok(Value::Nil)
 }
 
-/// Load a JSON file from `www` as a Lua table.
+/// Loads a JSON file from `www` as a Lua table.
 #[luafn]
 pub fn json(lua: &Lua, path: String) -> eyre::Result<Value> {
     let path = paths::www()?.join(path);
@@ -46,16 +46,16 @@ pub fn json(lua: &Lua, path: String) -> eyre::Result<Value> {
     Ok(lua.to_value(&serde)?)
 }
 
-/// Read a text file from `www` and return its contents as a string.
+/// Reads a text file from `www` and returns its contents as a string.
 #[luafn]
 pub fn read(lua: &Lua, path: String) -> eyre::Result<String> {
     let path = paths::www()?.join(path);
     Ok(fs::read_to_string(&path)?)
 }
 
-/// Return a file's last-modified date in UTC as an ISO timestamp string.
+/// Returns an input-file's last-modified date in UTC as an ISO timestamp string.
 ///
-/// Useful for embedding in a `sitemap.xml`.
+/// Useful for embedding inside a `sitemap.xml`.
 #[luafn]
 pub fn lastmod(lua: &Lua, path: String) -> eyre::Result<String> {
     let path = paths::www()?.join(path);
@@ -64,7 +64,7 @@ pub fn lastmod(lua: &Lua, path: String) -> eyre::Result<String> {
     Ok(iso.format("%+").to_string())
 }
 
-/// Add a global variable that can be referenced from templates.
+/// Adds a global variable that can be referenced from templates.
 #[luafn]
 pub fn inject(lua: &Lua, name: String, value: Value) -> eyre::Result<Value> {
     let ctx = &mut lua.app_data_mut::<State>().unwrap().global_context;
