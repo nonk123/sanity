@@ -132,19 +132,14 @@ async fn realmain() -> eyre::Result<ExitCode> {
 }
 
 async fn run_server(port: u16) -> eyre::Result<()> {
-    let addr = SocketAddr::from(([127, 0, 0, 1], port));
-    let listener = TcpListener::bind(addr).await?;
+    let listener = TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], port))).await?;
     info!("Hosting dev-server on http://localhost:{}", port);
+    info!("Do not expose this port to the internet!");
 
     loop {
-        let (stream, addr) = listener.accept().await?;
-
-        if !addr.ip().is_loopback() {
-            warn!("We don't tolerate outsiders here: {}", addr);
-            continue;
-        }
-
+        let (stream, _) = listener.accept().await?;
         let io = TokioIo::new(stream);
+
         tokio::spawn(async move {
             if let Err(err) = http1::Builder::new()
                 .serve_connection(io, service_fn(http_service))
