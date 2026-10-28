@@ -2,14 +2,14 @@ version: 2
 updates:
   - package-ecosystem: cargo
     directory: /
-    schedule: { interval: weekly }
+    schedule: { interval: monthly }
     groups:
-      cargo:
+      sybau:
         patterns: ["*"]
 
   - package-ecosystem: github-actions
     directory: /
-    schedule: { interval: weekly }
+    schedule: { interval: monthly }
     groups:
-      gh:
+      sybau:
         patterns: ["*"]
