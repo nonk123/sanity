@@ -7,7 +7,10 @@ use std::{
 };
 
 use color_eyre::eyre::{self, eyre};
-use minijinja::{context, value::merge_maps};
+use minijinja::{
+    context,
+    value::{Serde as JSerde, Value as JValue, merge_maps},
+};
 use rayon::prelude::*;
 use tokio::sync::{RwLock, RwLockReadGuard};
 
@@ -175,8 +178,8 @@ impl State {
             Err(_) => return Err(eyre!("damn it")),
         };
 
-        let globals = minijinja::Value::from_serialize(&lua.global_context);
-        let merge = |x: &minijinja::Value| merge_maps([globals.clone(), x.clone()]);
+        let globals = JValue::from(JSerde(&lua.global_context));
+        let merge = |x: &JValue| merge_maps([globals.clone(), x.clone()]);
 
         names.par_iter().try_for_each(|name| {
             let target = paths::dist()?.join(&name);

@@ -6,18 +6,18 @@ edition = "2024"
 [dependencies]
 sanity-macros = { path = "../sanity-macros" }
 
-clap = { version = "4.6.1", features = ["derive"] }
+clap = { version = "4.6.7", features = ["derive"] }
 color-eyre = { version = "0.6.5", default-features = false }
-http-body-util = "0.1.3"
-hyper = { version = "1.10.1", features = ["http1", "server"] }
-hyper-util = { version = "0.1.20", features = ["http1", "server", "tokio"] }
-minijinja = { version = "2.20.0", features = ["loader", "multi_template"] }
+http-body-util = "0.1.5"
+hyper = { version = "1.12.0", features = ["http1", "server"] }
+hyper-util = { version = "0.1.21", features = ["http1", "server", "tokio"] }
+minijinja = { version = "3.1.0", features = ["serde"] }
 notify-debouncer-full = "0.7.0"
-tokio = { version = "1.52.3", features = ["full"] }
-env_logger = "0.11.10"
-log = { version = "0.4.32", features = ["std"] }
-serde = { version = "1.0.228", features = ["alloc"] }
-serde_json = { version = "1.0.149", features = ["alloc"] }
+tokio = { version = "1.54.1", features = ["full"] }
+env_logger = "0.11.11"
+log = { version = "0.4.35", features = ["std"] }
+serde = { version = "1.0.229", features = ["alloc"] }
+serde_json = { version = "1.0.154", features = ["alloc"] }
 chrono = "0.4.45"
 dunce = "1.0.5"
 rayon = "1.12.0"
@@ -36,5 +36,5 @@ version = "0.13.4"
 default-features = false
 
 [dependencies.mlua]
-version = "0.12.0"
+version = "0.12.2"
 features = ["luajit", "serialize", "send", "error-send", "vendored"]

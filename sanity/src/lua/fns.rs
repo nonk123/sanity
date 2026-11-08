@@ -2,7 +2,7 @@ use std::fs::{self, File};
 
 use chrono::{DateTime, Utc};
 use color_eyre::eyre;
-use minijinja::Value as JValue;
+use minijinja::value::{Serde as JSerde, Value as JValue};
 use mlua::{Lua, LuaSerdeExt, Value};
 
 use sanity_macros::luafn;
@@ -29,7 +29,7 @@ pub fn render(lua: &Lua, template: String, target: String, context: Value) -> ey
 
     let mut state = lua.app_data_mut::<State>().unwrap();
     state.render_queue.push(Render {
-        context: JValue::from_serialize(context),
+        context: JValue::from(JSerde(context)),
         target: paths::dist()?.join(target),
         template,
     });
@@ -68,6 +68,6 @@ pub fn lastmod(lua: &Lua, path: String) -> eyre::Result<String> {
 #[luafn]
 pub fn inject(lua: &Lua, name: String, value: Value) -> eyre::Result<Nil> {
     let ctx = &mut lua.app_data_mut::<State>().unwrap().global_context;
-    ctx.insert(name, JValue::from_serialize(value));
+    ctx.insert(name, JValue::from(JSerde(value)));
     Ok(Nil)
 }
