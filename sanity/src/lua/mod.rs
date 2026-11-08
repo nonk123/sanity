@@ -58,8 +58,22 @@ pub trait LuaFn {
     fn returns(&self) -> String;
 }
 
+pub struct Nil;
+
+impl IntoLua for Nil {
+    fn into_lua(self, _: &Lua) -> mlua::prelude::LuaResult<Value> {
+        Ok(Value::Nil)
+    }
+}
+
 pub trait LuaFnReturn {
     fn typename() -> String;
+}
+
+impl LuaFnReturn for Nil {
+    fn typename() -> String {
+        String::from("nil")
+    }
 }
 
 impl LuaFnReturn for mlua::Value {

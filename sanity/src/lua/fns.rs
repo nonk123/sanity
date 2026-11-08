@@ -8,7 +8,7 @@ use mlua::{Lua, LuaSerdeExt, Value};
 use sanity_macros::luafn;
 
 use crate::{
-    lua::{LuaFn, Render, State},
+    lua::{LuaFn, Nil, Render, State},
     paths,
 };
 
@@ -24,7 +24,7 @@ pub fn all() -> Vec<Box<dyn LuaFn + Send>> {
 
 /// Queues a template to be rendered into dist.
 #[luafn]
-pub fn render(lua: &Lua, template: String, target: String, context: Value) -> eyre::Result<Value> {
+pub fn render(lua: &Lua, template: String, target: String, context: Value) -> eyre::Result<Nil> {
     trace!("lua render: {} {} => {:?}", template, target, context);
 
     let mut state = lua.app_data_mut::<State>().unwrap();
@@ -34,10 +34,10 @@ pub fn render(lua: &Lua, template: String, target: String, context: Value) -> ey
         template,
     });
 
-    Ok(Value::Nil)
+    Ok(Nil)
 }
 
-/// Loads a JSON file from `www` as a Lua table.
+/// Loads a JSON file from `www`.
 #[luafn]
 pub fn json(lua: &Lua, path: String) -> eyre::Result<Value> {
     let path = paths::www()?.join(path);
@@ -66,8 +66,8 @@ pub fn lastmod(lua: &Lua, path: String) -> eyre::Result<String> {
 
 /// Adds a global variable that can be referenced from templates.
 #[luafn]
-pub fn inject(lua: &Lua, name: String, value: Value) -> eyre::Result<Value> {
+pub fn inject(lua: &Lua, name: String, value: Value) -> eyre::Result<Nil> {
     let ctx = &mut lua.app_data_mut::<State>().unwrap().global_context;
     ctx.insert(name, JValue::from_serialize(value));
-    Ok(Value::Nil)
+    Ok(Nil)
 }
